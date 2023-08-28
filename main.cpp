@@ -126,12 +126,12 @@ int main(int, char **) {
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
-    ImFont *font = io.Fonts->AddFontFromFileTTF("./src/Kaiti.ttc", 20.0f, nullptr,
-                                                io.Fonts->GetGlyphRangesChineseFull());
+//    ImFont *font = io.Fonts->AddFontFromFileTTF("./src/Kaiti.ttc", 20.0f, nullptr,
+//                                                io.Fonts->GetGlyphRangesChineseFull());
 
-    if (font == nullptr) {
-        printf("cannot open font file: Kaiti.ttc\n");
-    }
+//    if (font == nullptr) {
+//        printf("cannot open font file: Kaiti.ttc\n");
+//    }
 
     // Our state
     // ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -189,7 +189,8 @@ int main(int, char **) {
             ImGui::Begin("Hello, world!", nullptr,
                          ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground |
                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
-                         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
+                         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar |
+                         ImGuiWindowFlags_NoScrollWithMouse);
             ImGui::SetWindowSize(io.DisplaySize, ImGuiCond_Always);
             ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Always);
 //            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, 0);
@@ -208,6 +209,16 @@ int main(int, char **) {
             push_box_game_machine.Render(0.7 * io.DisplaySize.y, 0.7 * io.DisplaySize.x);
             ImGui::SetCursorPos(ImVec2(10, 0));
             ImGui::TextColored(ImVec4(0, 0, 0, 255), "%f pfs", 1000 / delta_time);
+            ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(6 / 7.0f, 0.6f, 0.6f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(7 / 7.0f, 0.7f, 0.7f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(7 / 7.0f, 0.8f, 0.8f));
+            if(ImGui::Button("Restart")) {
+                push_box_game_machine.ResetGame();
+            }
+            if(ImGui::Button("revoke one step.")) {
+                push_box_game_machine.RevokeOneStep();
+            }
+            ImGui::PopStyleColor(3);
 
             ImGui::End();
         }

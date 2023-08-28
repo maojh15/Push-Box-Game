@@ -58,7 +58,7 @@ public:
     }
 
     enum ObjectName {
-        WALL, FLOOR, BOX, DESTINATION, PLAYER
+        WALL, FLOOR, BOX, DESTINATION, PLAYER, OUTSIDE
     };
 
     std::vector<std::vector<ObjectName>> level_data;
@@ -123,7 +123,7 @@ private:
             int pos_x = 0;
             for (auto ch: line) {
                 if (ch_to_obj_name.find(ch) == ch_to_obj_name.end()) {
-                    throw std::runtime_error(text_level + " has unrecognized characters: " + ch);
+                    ch_to_obj_name[ch] = OUTSIDE;
                 }
                 object_name_list.push_back(ch_to_obj_name[ch]);
                 bool is_destination = false;

@@ -14,12 +14,15 @@ void PushBox::Render(int game_area_height, int game_area_width) {
                         (io.DisplaySize.y - game_resource_.map_num_rows * block_edge_len) / 2);
 
     box_positions_.clear();
-    for (int i = 0; i < game_resource_.level_data.size(); ++i) {
-        for (int j = 0; j < game_resource_.level_data[i].size(); ++j) {
+    for (int i = 0; i < level_data_ptr_.size(); ++i) {
+        for (int j = 0; j < level_data_ptr_[i].size(); ++j) {
+            if (level_data_ptr_[i][j] == GameResource::OUTSIDE) {
+                continue;
+            }
             ImGui::SetCursorPos(ImVec2(left_top_pos.x + j * block_edge_len, left_top_pos.y + i * block_edge_len));
             ImGui::Image((void *) (intptr_t) (game_resource_.GetFloorTexture()), block_size);
             ImGui::SetCursorPos(ImVec2(left_top_pos.x + j * block_edge_len, left_top_pos.y + i * block_edge_len));
-            switch (game_resource_.level_data[i][j]) {
+            switch (level_data_ptr_[i][j]) {
                 case GameResource::WALL:
                     ImGui::Image((void *) (intptr_t) (game_resource_.GetWallTexture()), block_size);
                     break;
@@ -90,29 +93,41 @@ void PushBox::ProcessInput(SDL_Event &event) {
     }
 }
 
-void PushBox::MovePlayer(int move_x, int move_y) {
+/**
+ *
+ * @param move_x
+ * @param move_y
+ * @return whether state of game date recorded is changed.
+ */
+bool PushBox::MovePlayer(int move_x, int move_y) {
     Position moved_pos{player_position_.x + move_x, player_position_.y + move_y};
-    if ((*level_data_ptr_)[moved_pos.y][moved_pos.x] == GameResource::WALL) {
-        return;
+    if (level_data_ptr_[moved_pos.y][moved_pos.x] == GameResource::WALL) {
+        return false;
     }
-    if ((*level_data_ptr_)[moved_pos.y][moved_pos.x] == GameResource::BOX) {
+    bool is_recorded = false;
+    if (level_data_ptr_[moved_pos.y][moved_pos.x] == GameResource::BOX) {
         // move box
-        if ((*level_data_ptr_)[moved_pos.y + move_y][moved_pos.x + move_x] != GameResource::FLOOR) {
-            return;
+        if (level_data_ptr_[moved_pos.y + move_y][moved_pos.x + move_x] != GameResource::FLOOR) {
+            return false;
         }
-        if ((*destination_record_)[moved_pos.y][moved_pos.x]) {
+        game_record_.Record(*this);
+        is_recorded = true;
+        if (destination_record_[moved_pos.y][moved_pos.x]) {
             ++count_destination_left_;
         }
-        if ((*destination_record_)[moved_pos.y + move_y][moved_pos.x + move_x]) {
+        if (destination_record_[moved_pos.y + move_y][moved_pos.x + move_x]) {
             --count_destination_left_;
         }
-        (*level_data_ptr_)[moved_pos.y + move_y][moved_pos.x + move_x] = GameResource::BOX;
+        level_data_ptr_[moved_pos.y + move_y][moved_pos.x + move_x] = GameResource::BOX;
+    }
+    if (!is_recorded) {
+        game_record_.Record(*this);
     }
     // move player
-    (*level_data_ptr_)[player_position_.y][player_position_.x] = GameResource::FLOOR;
+    level_data_ptr_[player_position_.y][player_position_.x] = GameResource::FLOOR;
     player_position_ = moved_pos;
-    (*level_data_ptr_)[player_position_.y][player_position_.x] = GameResource::PLAYER;
-    std::cout << "count_destination_left_ = " << count_destination_left_ << std::endl;
+    level_data_ptr_[player_position_.y][player_position_.x] = GameResource::PLAYER;
+    return true;
 }
 
 void PushBox::CheckGameState() {
@@ -126,4 +141,14 @@ void PushBox::CheckGameState() {
     if (game_state_ != WIN) {
         game_state_ = PREWIN;
     }
+}
+
+void PushBox::ResetGame() {
+    player_position_ = game_resource_.initial_player_position;
+    destination_positions_ = game_resource_.initial_destination_positions;
+    level_data_ptr_ = game_resource_.level_data;
+    destination_record_ = game_resource_.destination_record;
+    count_destination_left_ = destination_positions_.size();
+    game_state_ = PLAYING;
+    game_record_.ClearRecord();
 }
