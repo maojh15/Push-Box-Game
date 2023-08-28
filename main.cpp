@@ -3,6 +3,8 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
+#include "PushBox.h"
+
 #include <chrono>
 #include <iostream>
 
@@ -11,10 +13,13 @@
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 #include <SDL.h>
+
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
 #else
+
 #include <SDL_opengl.h>
+
 #endif
 
 // This example can also compile and run with Emscripten! See 'Makefile.emscripten' for details.
@@ -22,15 +27,13 @@
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
-const int fps = 60;
+const int fps = 40;
 
 // Main code
-int main(int, char**)
-{
+int main(int, char **) {
     auto time1 = std::chrono::steady_clock::now();
     // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-    {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
         printf("Error: %s\n", SDL_GetError());
         return -1;
     }
@@ -45,7 +48,7 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 #elif defined(__APPLE__)
     // GL 3.2 Core + GLSL 150
-    const char* glsl_version = "#version 150";
+    const char *glsl_version = "#version 150";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -68,16 +71,34 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("My Hello World Program", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 500, window_flags);
+
+//    int window_width = bg_img_ptr->width;
+//    int window_height = bg_img_ptr->height;
+    int window_width = 1000;
+    int window_height = 600;
+
+
+    SDL_WindowFlags window_flags = (SDL_WindowFlags) (SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
+                                                      SDL_WINDOW_ALLOW_HIGHDPI);
+    SDL_Window *window = SDL_CreateWindow("PushBox", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                          window_width, window_height, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
+    std::cout << "Window created" << std::endl;
+    std::cout << "Loading Game Resource ... " << std::endl;
+    // Initial Game Data
+    PushBox push_box_game_machine;
+    auto bg_img_ptr = push_box_game_machine.GetGameResource().GetBackgroundTextureObj();
+
+    std::cout << "Game Resource loaded" << std::endl;
+
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGuiIO &io = ImGui::GetIO();
+    (void) io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -105,15 +126,16 @@ int main(int, char**)
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
-    ImFont* font = io.Fonts->AddFontFromFileTTF("../src/Kaiti.ttc", 20.0f, nullptr,
-        io.Fonts->GetGlyphRangesChineseFull());
-    if(font == nullptr) {
+    ImFont *font = io.Fonts->AddFontFromFileTTF("./src/Kaiti.ttc", 20.0f, nullptr,
+                                                io.Fonts->GetGlyphRangesChineseFull());
+
+    if (font == nullptr) {
         printf("cannot open font file: Kaiti.ttc\n");
     }
 
     // Our state
     // ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    ImVec4 clear_color = ImVec4(0.589f, 0.863f, 0.491f, 1.00f);
+    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
 
     // Main loop
     bool done = false;
@@ -124,17 +146,15 @@ int main(int, char**)
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
 
+    std::cout << "Start main loop" << std::endl;
     Uint64 ms_per_frame = 1000 / fps;
     auto time2 = std::chrono::steady_clock::now();
-    std::cout << "time: " << std::chrono::duration<double, std::milli>(time2 - time1).count() << "ms\n";
-    std::cout << "Start Main Render Loop" << std::endl;
     time1 = std::chrono::steady_clock::now();
     while (!done)
 #endif
     {
         time2 = std::chrono::steady_clock::now();
         double delta_time = std::chrono::duration<double, std::milli>(time2 - time1).count();
-        std::cout << "time: " << delta_time << "ms\n";
         time1 = time2;
         Uint64 tick1 = SDL_GetTicks64();
         // Poll and handle events (inputs, window resize, etc.)
@@ -143,12 +163,15 @@ int main(int, char**)
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
+        auto io = ImGui::GetIO();
+        io.WantCaptureKeyboard = false;
+        while (SDL_PollEvent(&event)) {
+            push_box_game_machine.ProcessInput(event);
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
+                event.window.windowID == SDL_GetWindowID(window))
                 done = true;
         }
 
@@ -163,11 +186,17 @@ int main(int, char**)
 //                 ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoBackground
 //                 |ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize);                          // Create a window called "Hello, world!" and append into it.
 
-
             ImGui::Begin("Hello, world!", nullptr,
-                ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoBackground|
-                ImGuiWindowFlags_NoMove);
-            ImGui::TextColored(ImVec4(0, 0, 0, 255), "%f pfs", 1000/delta_time);
+                         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground |
+                         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
+            ImGui::SetWindowSize(io.DisplaySize, ImGuiCond_Always);
+            ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+//            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, 0);
+//            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+            ImGui::SetCursorScreenPos(ImVec2(0, 0));
+            ImGui::Image((void *) (intptr_t) (bg_img_ptr->textureID), io.DisplaySize);
+//            ImGui::PopStyleVar(2);
 //
 //            ImGui::Text("Hello, world!");
 //            ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor(233, 143, 72));
@@ -176,22 +205,25 @@ int main(int, char**)
 //            }
 //            ImGui::PopStyleColor(1);
 //
+            push_box_game_machine.Render(0.7 * io.DisplaySize.y, 0.7 * io.DisplaySize.x);
+            ImGui::SetCursorPos(ImVec2(10, 0));
+            ImGui::TextColored(ImVec4(0, 0, 0, 255), "%f pfs", 1000 / delta_time);
+
             ImGui::End();
         }
 
         // Rendering
         ImGui::Render();
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glViewport(0, 0, (int) io.DisplaySize.x, (int) io.DisplaySize.y);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w,
+                     clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-
 
         SDL_GL_SwapWindow(window);
 
         Uint64 tick2 = SDL_GetTicks64();
-        if(tick2 - tick1 < ms_per_frame) {
+        if (tick2 - tick1 < ms_per_frame) {
             SDL_Delay(ms_per_frame - (tick2 - tick1));
         }
     }
