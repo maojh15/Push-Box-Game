@@ -12,7 +12,7 @@ class LoadTextureTool {
 public:
     LoadTextureTool(const char *filename) {
         LoadTextureFromFile(filename, &textureID, &width, &height);
-        std::cout << "image size: " << width << "x" << height << std::endl;
+        std::cout << filename << ", image size: " << width << "x" << height << std::endl;
     }
 
     GLuint textureID;

@@ -26,11 +26,13 @@ public:
 
     void RevokeOneStep() {
         game_record_.RecoverRecord(*this);
+        --step_count_;
     }
 
 private:
     GameResource game_resource_;
     std::unordered_map<GameResource::ObjectName, GLuint> obj_name_to_texture_id_;
+    int step_count_ = 0;
 
     bool MovePlayer(int move_x, int move_y);
 
@@ -87,7 +89,6 @@ private:
         }
 
         void RecoverRecord(PushBox &push_box) {
-            std::cout << player_operation_record.size() << std::endl;
             if (player_operation_record.empty()) {
                 return;
             }
@@ -105,6 +106,10 @@ private:
 
     GameRecord game_record_{50};
 
+    void RenderWin();
+    void RenderGamePlaying();
+
+    bool show_win_image_ = true;
 };
 
 

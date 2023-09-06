@@ -119,7 +119,7 @@ int main(int, char **) {
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
-    //io.Fonts->AddFontDefault();
+    io.Fonts->AddFontDefault();
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
@@ -207,15 +207,19 @@ int main(int, char **) {
 //            ImGui::PopStyleColor(1);
 //
             push_box_game_machine.Render(0.7 * io.DisplaySize.y, 0.7 * io.DisplaySize.x);
+
+            // show FPS
             ImGui::SetCursorPos(ImVec2(10, 0));
             ImGui::TextColored(ImVec4(0, 0, 0, 255), "%f pfs", 1000 / delta_time);
+
+            // Add Button
             ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(6 / 7.0f, 0.6f, 0.6f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(7 / 7.0f, 0.7f, 0.7f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(7 / 7.0f, 0.8f, 0.8f));
-            if(ImGui::Button("Restart")) {
+            if(ImGui::Button("Restart", ImVec2(200, 50))) {
                 push_box_game_machine.ResetGame();
             }
-            if(ImGui::Button("revoke one step.")) {
+            if(ImGui::Button("Revoke One Step.", ImVec2(200, 50))) {
                 push_box_game_machine.RevokeOneStep();
             }
             ImGui::PopStyleColor(3);

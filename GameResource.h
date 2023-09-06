@@ -7,6 +7,7 @@
 
 #include "LoadTexture.h"
 #include "imgui.h"
+#include "SDL_filesystem.h"
 
 #include <fstream>
 #include <iostream>
@@ -18,6 +19,8 @@
 class GameResource {
 public:
     GameResource() {
+        auto base_path = SDL_GetBasePath();
+        root_dir = std::string(base_path) + root_dir;
         std::cout << "Initialized Game resource ... " << std::endl;
         ch_to_obj_name['w'] = ch_to_obj_name['W'] = WALL;
         ch_to_obj_name['f'] = ch_to_obj_name['F'] = FLOOR;
@@ -39,6 +42,10 @@ public:
 
     GLuint GetBoxTexture() {
         return box_texture->textureID;
+    }
+
+    GLuint GetBoxArrivedTexture() {
+        return box_arrived_texture->textureID;
     }
 
     GLuint GetDestinationTexture() {
@@ -79,10 +86,11 @@ public:
     std::vector<Position> initial_box_positions;
     std::vector<Position> initial_destination_positions;
 private:
-    const std::string root_dir = "./src/";
+    std::string root_dir = "";
     const std::string img_wall = "wall.png";
     const std::string img_floor = "floor.png";
     const std::string img_box = "box.png";
+    const std::string img_box_arrived = "box2.png";
     const std::string img_destination = "destination.png";
     const std::string img_player = "player.png";
 
@@ -91,6 +99,7 @@ private:
 
     std::shared_ptr<LoadTextureTool> wall_texture, floor_texture;
     std::shared_ptr<LoadTextureTool> box_texture, destination_texture, player_texture;
+    std::shared_ptr<LoadTextureTool> box_arrived_texture;
     std::shared_ptr<LoadTextureTool> background_texture, win_texture;
 
     const std::string text_level = "level.txt";
@@ -100,6 +109,7 @@ private:
         wall_texture = std::make_shared<LoadTextureTool>((root_dir + img_wall).c_str());
         floor_texture = std::make_shared<LoadTextureTool>((root_dir + img_floor).c_str());
         box_texture = std::make_shared<LoadTextureTool>((root_dir + img_box).c_str());
+        box_arrived_texture = std::make_shared<LoadTextureTool>((root_dir + img_box_arrived).c_str());
         destination_texture = std::make_shared<LoadTextureTool>((root_dir + img_destination).c_str());
         player_texture = std::make_shared<LoadTextureTool>((root_dir + img_player).c_str());
         background_texture = std::make_shared<LoadTextureTool>((root_dir + img_background).c_str());

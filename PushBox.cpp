@@ -8,10 +8,10 @@
 void PushBox::Render(int game_area_height, int game_area_width) {
     int block_edge_len = std::min(game_area_height / game_resource_.map_num_rows,
                                   game_area_width / game_resource_.map_num_cols);
-    ImVec2 block_size(block_edge_len + 2, block_edge_len + 1);
+    ImVec2 block_size(block_edge_len + 1, block_edge_len + 1);
     auto &io = ImGui::GetIO();
-    ImVec2 left_top_pos((io.DisplaySize.x - game_resource_.map_num_cols * block_edge_len) / 2,
-                        (io.DisplaySize.y - game_resource_.map_num_rows * block_edge_len) / 2);
+    ImVec2 left_top_pos(static_cast<int>((io.DisplaySize.x - game_resource_.map_num_cols * block_edge_len) / 2),
+                        static_cast<int>((io.DisplaySize.y - game_resource_.map_num_rows * block_edge_len) / 2));
 
     box_positions_.clear();
     for (int i = 0; i < level_data_ptr_.size(); ++i) {
@@ -49,7 +49,10 @@ void PushBox::Render(int game_area_height, int game_area_width) {
     }
     for (auto &pos: box_positions_) {
         ImGui::SetCursorPos(comp_position(pos));
-        ImGui::Image((void *) (intptr_t) (game_resource_.GetBoxTexture()), block_size);
+        ImGui::Image((void *) (intptr_t) (
+                destination_record_[pos.y][pos.x] ?
+                game_resource_.GetBoxArrivedTexture() :
+                game_resource_.GetBoxTexture()), block_size);
     }
 
 
@@ -60,14 +63,11 @@ void PushBox::Render(int game_area_height, int game_area_width) {
     CheckGameState();
 
     if (game_state_ == WIN) {
-        auto win_texture = game_resource_.GetWinTextureObj();
-        auto io = ImGui::GetIO();
-        int txt_width = 0.5 * io.DisplaySize.x;
-        int txt_height = 0.5 * io.DisplaySize.y;
-        ImGui::SetCursorPos(
-                ImVec2((io.DisplaySize.x - txt_width) / 2, (io.DisplaySize.y - txt_height) / 2));
-        ImGui::Image((void *) (intptr_t) (win_texture->textureID), ImVec2(txt_width, txt_height));
+        RenderWin();
     }
+
+    ImGui::SetCursorPos(ImVec2(io.DisplaySize.x - 100, 0.0));
+    ImGui::TextColored(ImVec4(0.0, 0.0, 0.0, 1.0), "step: %d", step_count_);
 }
 
 void PushBox::ProcessInput(SDL_Event &event) {
@@ -127,6 +127,7 @@ bool PushBox::MovePlayer(int move_x, int move_y) {
     level_data_ptr_[player_position_.y][player_position_.x] = GameResource::FLOOR;
     player_position_ = moved_pos;
     level_data_ptr_[player_position_.y][player_position_.x] = GameResource::PLAYER;
+    ++step_count_;
     return true;
 }
 
@@ -151,4 +152,34 @@ void PushBox::ResetGame() {
     count_destination_left_ = destination_positions_.size();
     game_state_ = PLAYING;
     game_record_.ClearRecord();
+    step_count_ = 0;
+    show_win_image_ = true;
+}
+
+void PushBox::RenderWin() {
+    if (show_win_image_) {
+        auto win_texture = game_resource_.GetWinTextureObj();
+        auto io = ImGui::GetIO();
+        int txt_width = 0.5 * io.DisplaySize.x;
+        int txt_height = 0.5 * io.DisplaySize.y;
+        ImGui::SetCursorPos(
+                ImVec2((io.DisplaySize.x - txt_width) / 2, (io.DisplaySize.y - txt_height) / 2));
+        ImGui::Image((void *) (intptr_t) (win_texture->textureID), ImVec2(txt_width, txt_height));
+    }
+
+    // Add toggle win button.
+    auto io = ImGui::GetIO();
+    int button_width = 200;
+    int button_height = 40;
+    ImGui::SetCursorPos(ImVec2((io.DisplaySize.x - button_width) / 2,
+                               io.DisplaySize.y - 10 - button_height));
+    std::string hide_win = "Hide 'win'";
+    std::string show_win = "Show 'win'";
+    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4) ImColor::HSV(6 / 7.0f, 0.6f, 0.6f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4) ImColor::HSV(7 / 7.0f, 0.7f, 0.7f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4) ImColor::HSV(7 / 7.0f, 0.8f, 0.8f));
+    if (ImGui::Button((show_win_image_ ? hide_win : show_win).c_str(), ImVec2(button_width, button_height))) {
+        show_win_image_ = !show_win_image_;
+    }
+    ImGui::PopStyleColor(3);
 }
