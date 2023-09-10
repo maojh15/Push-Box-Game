@@ -213,14 +213,17 @@ int main(int, char **) {
             ImGui::TextColored(ImVec4(0, 0, 0, 255), "%f pfs", 1000 / delta_time);
 
             // Add Button
-            ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(6 / 7.0f, 0.6f, 0.6f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(7 / 7.0f, 0.7f, 0.7f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(7 / 7.0f, 0.8f, 0.8f));
-            if(ImGui::Button("Restart", ImVec2(200, 50))) {
+            ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4) ImColor::HSV(6 / 7.0f, 0.6f, 0.6f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4) ImColor::HSV(7 / 7.0f, 0.7f, 0.7f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4) ImColor::HSV(7 / 7.0f, 0.8f, 0.8f));
+            if (ImGui::Button("Restart", ImVec2(200, 50))) {
                 push_box_game_machine.ResetGame();
             }
-            if(ImGui::Button("Revoke One Step.", ImVec2(200, 50))) {
+            if (ImGui::Button("Revoke One Step.", ImVec2(200, 50))) {
                 push_box_game_machine.RevokeOneStep();
+            }
+            if (ImGui::Button("BFS Solution", ImVec2(200, 30))) {
+                push_box_game_machine.BFSSolveGame();
             }
             ImGui::PopStyleColor(3);
 

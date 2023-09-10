@@ -32,10 +32,13 @@ target_link_libraries(imgui_lib PUBLIC "${SDL2Fwk}" "-framework OpenGL")
 
 target_link_libraries(main PUBLIC imgui_lib)
 
-add_library(PushBox PushBox.cpp PushBox.h GameResource.cpp GameResource.h LoadTexture.cpp LoadTexture.h)
+add_subdirectory(BFS_Solver)
+
+add_library(PushBox PushBox.cpp PushBox.h GameResource.h LoadTexture.cpp LoadTexture.h)
 target_include_directories(PushBox PUBLIC ${SDL2_INCLUDE_DIR} ${IMGUI_DIR})
 target_link_directories(PushBox PUBLIC ${BREW_LIBRARIES_DIR})
 target_link_libraries(PushBox PUBLIC "${SDL2Fwk}" "-framework OpenGL")
+target_link_libraries(PushBox PUBLIC BFS_Solver)
 #target_link_libraries(PushBox PUBLIC "-framework SDL2" "-framework OpenGL")
 target_link_libraries(main PUBLIC PushBox)
 

@@ -7,6 +7,7 @@
 
 #include "GameResource.h"
 #include "SDL.h"
+#include "BFS_Solver.h"
 
 class PushBox {
 public:
@@ -27,6 +28,28 @@ public:
     void RevokeOneStep() {
         game_record_.RecoverRecord(*this);
         --step_count_;
+    }
+
+    void BFSSolveGame() {
+        auto time1 = std::chrono::steady_clock::now();
+        std::vector<char> result = game_solver.SolveGame(game_resource_.level_data, game_resource_.destination_record);
+        auto time2 = std::chrono::steady_clock::now();
+        int count_step = 0;
+        std::cout << "======BFS Solution==========\n";
+        std::string output_result;
+        for (char ch: result) {
+            output_result.push_back(ch);
+            output_result.push_back(' ');
+            ++count_step;
+            if (count_step % 10 == 0) {
+                output_result.push_back('\n');
+            }
+        }
+        std::cout << output_result;
+        std::cout << "\ntotal steps: " << result.size() << std::endl;
+        std::cout << "cost time: " << std::chrono::duration<double, std::milli>(time2 - time1).count() << "ms"
+                  << std::endl;
+        std::cout << "============================" << std::endl;
     }
 
 private:
@@ -107,9 +130,12 @@ private:
     GameRecord game_record_{50};
 
     void RenderWin();
+
     void RenderGamePlaying();
 
     bool show_win_image_ = true;
+
+    BFS_Solver game_solver;
 };
 
 
