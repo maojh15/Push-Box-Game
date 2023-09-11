@@ -6,6 +6,26 @@
 #include "imgui.h"
 
 void PushBox::Render(int game_area_height, int game_area_width) {
+    switch (game_state_) {
+        case START:
+            RenderStartState();
+            break;
+        case PLAYING:
+            RenderPlayingState(game_area_height, game_area_width);
+            break;
+        case PREWIN:
+        case WIN:
+            RenderWin(game_area_height, game_area_width);
+            break;
+        case LEVEL_EDITOR:
+            RenderLevelEditor(game_area_height, game_area_width);
+            break;
+        default:
+            break;
+    }
+}
+
+void PushBox::RenderPlayingState(int game_area_height, int game_area_width) {
     int block_edge_len = std::min(game_area_height / game_resource_.map_num_rows,
                                   game_area_width / game_resource_.map_num_cols);
     ImVec2 block_size(block_edge_len + 1, block_edge_len + 1);
@@ -60,14 +80,37 @@ void PushBox::Render(int game_area_height, int game_area_width) {
     ImGui::Image((void *) (intptr_t) (game_resource_.GetPlayerTextuer()), block_size,
                  game_resource_.player_face_uv0, game_resource_.player_face_uv1);
 
-    CheckGameState();
-
-    if (game_state_ == WIN) {
-        RenderWin();
+    if (game_state_ != WIN) {
+        CheckGameState();
     }
 
     ImGui::SetCursorPos(ImVec2(io.DisplaySize.x - 100, 0.0));
     ImGui::TextColored(ImVec4(0.0, 0.0, 0.0, 1.0), "step: %d", step_count_);
+
+    RenderFunctionButtons();
+}
+
+void PushBox::RenderFunctionButtons() {
+    // Add Button
+    int num_style = SetButtonStyle();
+    ImVec2 button_sz(200, 50);
+    if (ImGui::Button("Return Title", button_sz)) {
+        game_state_ = START;
+        resume_game_flag_ = true;
+    }
+
+    button_sz.y = 40;
+    if (ImGui::Button("Restart", button_sz)) {
+        InitializeGame();
+    }
+    button_sz.y = 50;
+    if (ImGui::Button("Revoke One Step.", button_sz)) {
+        RevokeOneStep();
+    }
+    // if (ImGui::Button("BFS Solution", ImVec2(200, 30))) {
+    //     push_box_game_machine.BFSSolveGame();
+    // }
+    ImGui::PopStyleColor(num_style);
 }
 
 void PushBox::ProcessInput(SDL_Event &event) {
@@ -138,13 +181,12 @@ void PushBox::CheckGameState() {
     if (game_state_ == PREWIN) {
         SDL_Delay(500);
         game_state_ = WIN;
+        return;
     }
-    if (game_state_ != WIN) {
-        game_state_ = PREWIN;
-    }
+    game_state_ = PREWIN;
 }
 
-void PushBox::ResetGame() {
+void PushBox::InitializeGame() {
     player_position_ = game_resource_.initial_player_position;
     destination_positions_ = game_resource_.initial_destination_positions;
     level_data_ptr_ = game_resource_.level_data;
@@ -154,9 +196,12 @@ void PushBox::ResetGame() {
     game_record_.ClearRecord();
     step_count_ = 0;
     show_win_image_ = true;
+    resume_game_flag_ = false;
 }
 
-void PushBox::RenderWin() {
+void PushBox::RenderWin(int game_area_height, int game_area_width) {
+    RenderPlayingState(game_area_height, game_area_width);
+
     if (show_win_image_) {
         auto win_texture = game_resource_.GetWinTextureObj();
         auto io = ImGui::GetIO();
@@ -175,11 +220,75 @@ void PushBox::RenderWin() {
                                io.DisplaySize.y - 10 - button_height));
     std::string hide_win = "Hide 'win'";
     std::string show_win = "Show 'win'";
-    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4) ImColor::HSV(6 / 7.0f, 0.6f, 0.6f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4) ImColor::HSV(7 / 7.0f, 0.7f, 0.7f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4) ImColor::HSV(7 / 7.0f, 0.8f, 0.8f));
+    int num_style = SetButtonStyle();
     if (ImGui::Button((show_win_image_ ? hide_win : show_win).c_str(), ImVec2(button_width, button_height))) {
         show_win_image_ = !show_win_image_;
     }
-    ImGui::PopStyleColor(3);
+    ImGui::PopStyleColor(num_style);
 }
+
+//int SetButtonStyleForEnd() {
+//    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4) ImColor::HSV(7 / 8.0f, 0.6f, 0.8f, 1));
+//    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4) ImColor::HSV(7 / 8.0f, 0.7f, 0.85f, 1));
+//    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4) ImColor::HSV(7 / 8.0f, 0.8f, 0.9f, 1));
+//    return 3;
+//}
+
+void PushBox::RenderStartState() {
+    int num_style = SetButtonStyle();
+
+    ImVec2 button_sz(200, 40);
+    auto &io = ImGui::GetIO();
+
+    ImGui::SetCursorPosX(io.DisplaySize.x - button_sz.x - 10);
+    ImGui::SetCursorPosY(10);
+    if (ImGui::Button("Level Editor", button_sz)) {
+        game_state_ = LEVEL_EDITOR;
+    }
+
+    ImGui::SetCursorPosX((io.DisplaySize.x - button_sz.x) / 2);
+
+    if (resume_game_flag_) {
+        ImGui::SetCursorPosY(0.25 * io.DisplaySize.y - button_sz.y);
+        if (ImGui::Button("Resume Game", button_sz)) {
+            game_state_ = PLAYING;
+        }
+    } else {
+        ImGui::SetCursorPosY(0.25 * io.DisplaySize.y);
+    }
+
+    button_sz.y = 60;
+    button_sz.x = 180;
+    ImGui::SetCursorPosX((io.DisplaySize.x - button_sz.x) / 2);
+    if (ImGui::Button("Start Game", button_sz)) {
+        InitializeGame();
+    }
+
+//    ImGui::PopStyleColor(num_style);
+//
+//    num_style = SetButtonStyleForEnd();
+    ImGui::SetCursorPosX((io.DisplaySize.x - button_sz.x) / 2);
+    if (ImGui::Button("End Game", button_sz)) {
+        game_state_ = END;
+    }
+
+    ImGui::PopStyleColor(num_style);
+
+    ImGui::SetCursorPosX(io.DisplaySize.x - 130);
+    ImGui::SetCursorPosY(io.DisplaySize.y - 40);
+    ImGui::PushStyleColor(ImGuiCol_TitleBg, ImVec4(1, 1, 1, 0.6));
+    ImGui::TextColored(ImVec4(0, 0, 0, 1), GAME_VERSION);
+    ImGui::PopStyleColor();
+}
+
+int PushBox::SetButtonStyle() {
+    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4) ImColor::HSV(7 / 8.0f, 0.6f, 0.8f, 1));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4) ImColor::HSV(7.5 / 8.0f, 0.7f, 0.95f, 1));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4) ImColor::HSV(7 / 8.0f, 0.8f, 0.9f, 1));
+    return 3;
+}
+
+void PushBox::RenderLevelEditor(int game_area_height, int game_area_width) {
+
+}
+

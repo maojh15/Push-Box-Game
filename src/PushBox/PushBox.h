@@ -9,10 +9,16 @@
 #include "SDL.h"
 #include "BFS_Solver.h"
 
+#define GAME_VERSION "version 1.0.1"
+
 class PushBox {
 public:
+    enum GameState {
+        START, PLAYING, PREWIN, WIN, END, LEVEL_EDITOR
+    };
+
     PushBox() {
-        ResetGame();
+        game_state_ = START;
     }
 
     void Render(int game_area_height = 300, int game_area_width = 300);
@@ -23,7 +29,7 @@ public:
 
     void CheckGameState();
 
-    void ResetGame();
+    void InitializeGame();
 
     void RevokeOneStep() {
         if (game_record_.RecoverRecord(*this)) {
@@ -53,12 +59,24 @@ public:
         std::cout << "============================" << std::endl;
     }
 
+    GameState GetGameState() const { return game_state_; }
+
 private:
     GameResource game_resource_;
     std::unordered_map<GameResource::ObjectName, GLuint> obj_name_to_texture_id_;
     int step_count_ = 0;
 
     bool MovePlayer(int move_x, int move_y);
+
+    void RenderPlayingState(int game_area_height = 300, int game_area_width = 300);
+
+    void RenderStartState();
+
+    void RenderFunctionButtons();
+
+    int SetButtonStyle();
+
+    void RenderLevelEditor(int game_area_height = 300, int game_area_width = 300);
 
     using Position = GameResource::Position;
     Position player_position_;
@@ -67,10 +85,6 @@ private:
     std::vector<std::vector<bool>> destination_record_;
 
     int count_destination_left_;
-
-    enum GameState {
-        PLAYING, PREWIN, WIN
-    };
 
     GameState game_state_;
 
@@ -135,11 +149,13 @@ private:
 
     GameRecord game_record_{50};
 
-    void RenderWin();
+    void RenderWin(int game_area_height, int game_area_width);
 
     void RenderGamePlaying();
 
     bool show_win_image_ = true;
+
+    bool resume_game_flag_ = false;
 
     BFS_Solver game_solver;
 };

@@ -119,16 +119,19 @@ int main(int, char **) {
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See Makefile.emscripten for details.
-    io.Fonts->AddFontDefault();
+    ImFont *default_font = io.Fonts->AddFontDefault();
     //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
-//    ImFont *font = io.Fonts->AddFontFromFileTTF("./src/Kaiti.ttc", 20.0f, nullptr,
+    std::string root_dir = SDL_GetBasePath();
+    ImFont *font = io.Fonts->AddFontFromFileTTF((root_dir + "./Resources/Noteworthy.ttc").c_str(), 35.0f, nullptr);
 //                                                io.Fonts->GetGlyphRangesChineseFull());
-
+    if (font == nullptr) {
+        printf("cannot open font file: Noteworthy.ttc\n");
+    }
 //    if (font == nullptr) {
 //        printf("cannot open font file: Kaiti.ttc\n");
 //    }
@@ -150,7 +153,7 @@ int main(int, char **) {
     Uint64 ms_per_frame = 1000 / fps;
     auto time2 = std::chrono::steady_clock::now();
     time1 = std::chrono::steady_clock::now();
-    while (!done)
+    while (!done && push_box_game_machine.GetGameState() != PushBox::END)
 #endif
     {
         time2 = std::chrono::steady_clock::now();
@@ -206,26 +209,15 @@ int main(int, char **) {
 //            }
 //            ImGui::PopStyleColor(1);
 //
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10);
+            ImGui::PushFont(font);
             push_box_game_machine.Render(0.7 * io.DisplaySize.y, 0.7 * io.DisplaySize.x);
+            ImGui::PopFont();
+            ImGui::PopStyleVar();
 
             // show FPS
             ImGui::SetCursorPos(ImVec2(10, 0));
             ImGui::TextColored(ImVec4(0, 0, 0, 255), "%f pfs", 1000 / delta_time);
-
-            // Add Button
-            ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4) ImColor::HSV(6 / 7.0f, 0.6f, 0.6f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4) ImColor::HSV(7 / 7.0f, 0.7f, 0.7f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4) ImColor::HSV(7 / 7.0f, 0.8f, 0.8f));
-            if (ImGui::Button("Restart", ImVec2(200, 50))) {
-                push_box_game_machine.ResetGame();
-            }
-            if (ImGui::Button("Revoke One Step.", ImVec2(200, 50))) {
-                push_box_game_machine.RevokeOneStep();
-            }
-            // if (ImGui::Button("BFS Solution", ImVec2(200, 30))) {
-            //     push_box_game_machine.BFSSolveGame();
-            // }
-            ImGui::PopStyleColor(3);
 
             ImGui::End();
         }
