@@ -86,7 +86,7 @@ public:
     std::vector<Position> initial_box_positions;
     std::vector<Position> initial_destination_positions;
 private:
-    std::string root_dir = "";
+    std::string root_dir = "Resources/";
     const std::string img_wall = "wall.png";
     const std::string img_floor = "floor.png";
     const std::string img_box = "box.png";

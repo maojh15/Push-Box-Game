@@ -222,9 +222,9 @@ int main(int, char **) {
             if (ImGui::Button("Revoke One Step.", ImVec2(200, 50))) {
                 push_box_game_machine.RevokeOneStep();
             }
-            if (ImGui::Button("BFS Solution", ImVec2(200, 30))) {
-                push_box_game_machine.BFSSolveGame();
-            }
+            // if (ImGui::Button("BFS Solution", ImVec2(200, 30))) {
+            //     push_box_game_machine.BFSSolveGame();
+            // }
             ImGui::PopStyleColor(3);
 
             ImGui::End();

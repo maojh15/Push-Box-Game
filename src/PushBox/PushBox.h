@@ -26,8 +26,9 @@ public:
     void ResetGame();
 
     void RevokeOneStep() {
-        game_record_.RecoverRecord(*this);
-        --step_count_;
+        if (game_record_.RecoverRecord(*this)) {
+            --step_count_;
+        }
     }
 
     void BFSSolveGame() {
@@ -111,12 +112,17 @@ private:
                                                  push_box.count_destination_left_, push_box.game_state_);
         }
 
-        void RecoverRecord(PushBox &push_box) {
+        /**
+         * 
+         * @return true if revoke successfully. false when record is empty. 
+         */
+        bool RecoverRecord(PushBox &push_box) {
             if (player_operation_record.empty()) {
-                return;
+                return false;
             }
             player_operation_record.back().ReadFromRecord(push_box);
             player_operation_record.pop_back();
+            return true;
         }
 
         void ClearRecord() {

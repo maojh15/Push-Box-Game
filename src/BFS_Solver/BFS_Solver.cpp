@@ -6,7 +6,10 @@
 
 #include <exception>
 #include <unordered_map>
+#include <unordered_set>
 #include <queue>
+
+#include <iostream>
 
 /**
  * Find solution to PushBox game use minimal moving steps. Use Breath-first-search method.
@@ -18,7 +21,8 @@
 std::vector<char> BFS_Solver::SolveGame(const std::vector<std::vector<GameResource::ObjectName>> &level_data_,
                                         const std::vector<std::vector<bool>> &destination_record) {
     AnalysisLevelData(level_data_, destination_record);
-    return BFS(level_data_, destination_record);
+    // return BFS_AStar(level_data_, destination_record);
+   return BFS(level_data_, destination_record);
 }
 
 void BFS_Solver::AnalysisLevelData(const std::vector<std::vector<GameResource::ObjectName>> &level_data,
@@ -43,6 +47,7 @@ void BFS_Solver::AnalysisLevelData(const std::vector<std::vector<GameResource::O
     // test the correctness of input date.
     const std::string hint_size_not_equal = "ERROR: The size of level_data and destination_record not match.";
     int num_destination = 0;
+    destination_pos.clear();
     if (destination_record.size() != level_data.size()) {
         throw std::runtime_error(hint_size_not_equal);
     }
@@ -52,6 +57,7 @@ void BFS_Solver::AnalysisLevelData(const std::vector<std::vector<GameResource::O
         }
         for (int j = 0; j < destination_record[i].size(); ++j) {
             if (destination_record[i][j]) {
+                destination_pos.emplace(i, j);
                 ++num_destination;
             }
         }
@@ -116,36 +122,42 @@ std::vector<char> BFS_Solver::BFS(const std::vector<std::vector<GameResource::Ob
     que.push(initial_state_);
     visited[initial_state_.ToString()] = "0";
     bool find_solution = false;
+    int step = 0;
     while (!que.empty() && !find_solution) {
-        auto cur = que.front();
-        std::string cur_str = cur.ToString();
-        que.pop();
-        for (int i = 0; i < NUM_DIRECTIONS; ++i) {
-            PlayerState moved_state;
-            if (!CheckMoving(cur, move_dx[i], level_data, moved_state)) {
-                continue;
-            }
-            std::string moved_state_string = moved_state.ToString();
-            if (visited.find(moved_state_string) != visited.end()) {
-                continue;
-            }
-            visited[moved_state_string] = cur_str;
+        int que_sz = que.size();
+        for (int que_index = 0; que_index < que_sz; ++que_index) {
+            auto cur = que.front();
+            std::string cur_str = cur.ToString();
+            que.pop();
+            for (int i = 0; i < NUM_DIRECTIONS; ++i) {
+                PlayerState moved_state;
+                if (!CheckMoving(cur, move_dx[i], level_data, moved_state)) {
+                    continue;
+                }
+                std::string moved_state_string = moved_state.ToString();
+                if (visited.find(moved_state_string) != visited.end()) {
+                    continue;
+                }
+                visited[moved_state_string] = cur_str;
 
-            if (CheckArrived(moved_state, destination_record)) {
-                end_state = moved_state;
-                find_solution = true;
-                break;
-            }
+                if (CheckArrived(moved_state, destination_record)) {
+                    end_state = moved_state;
+                    find_solution = true;
+                    break;
+                }
 
-            que.push(moved_state);
+                que.push(moved_state);
+            }
         }
+        ++step;
+        std::cout << "searched step: " << step << ", visited states at this step: " << que_sz << std::endl;
     }
 
     std::vector<char> result;
     if (!find_solution) {
         return result;
     }
-
+    std::cout << "number of visited states: " << visited.size() << "\n";
     result = DecodeMoving(end_state, visited);
     return result;
 }
@@ -178,16 +190,108 @@ char ExtractMoveActionFromStateStr(const std::string &previous_str, const std::s
 }
 
 std::vector<char>
-BFS_Solver::DecodeMoving(PlayerState &end_state, const std::unordered_map<std::string, std::string> &visited) {
+BFS_Solver::DecodeMoving(PlayerState &end_state, const std::unordered_map<std::string, std::string> &previous) {
     std::vector<char> result;
     PlayerState cur = end_state;
     std::string initial_state_str = initial_state_.ToString();
     std::string cur_str = cur.ToString();
     while (cur_str != initial_state_str) {
-        const std::string &previous_state_str = visited.at(cur_str);
+        const std::string &previous_state_str = previous.at(cur_str);
         result.push_back(ExtractMoveActionFromStateStr(previous_state_str, cur_str));
         cur_str = previous_state_str;
     }
     std::reverse(result.begin(), result.end());
+    return result;
+}
+
+int BFS_Solver::AStarEstimateDistanceToEnd(const PlayerState &state) const {
+    int dist = 0;
+    auto itr1 = state.list_box_pos.begin();
+    auto itr2 = destination_pos.begin();
+    while (itr2 != destination_pos.end()) {
+        dist += std::abs(itr2->first - itr1->first) + std::abs(itr2->second - itr1->second);
+        ++itr1;
+        ++itr2;
+    }
+    return dist;
+}
+
+std::vector<char> BFS_Solver::BFS_AStar(const std::vector<std::vector<GameResource::ObjectName>> &level_data,
+                                        const std::vector<std::vector<bool>> &destination_record) {
+    PlayerState end_state;
+    const int NUM_DIRECTIONS = 4;
+    const char move_ch[] = "urdl";
+    const int move_dx[][2] = {{-1, 0},
+                              {0,  1},
+                              {1,  0},
+                              {0,  -1}};
+    std::unordered_map<std::string, std::string> previous; // map from state string to previous state string before moving.
+    std::unordered_map<std::string, int> distance;
+    std::unordered_set<std::string> known;
+    auto comp_greater = [&](const PlayerState &x, const PlayerState &y) -> bool {
+        return distance.at(x.ToString()) + AStarEstimateDistanceToEnd(x) >
+               distance.at(y.ToString()) + AStarEstimateDistanceToEnd(y);
+    };
+    std::priority_queue<PlayerState, std::vector<PlayerState>, decltype(comp_greater)> heap(comp_greater);
+    heap.push(initial_state_);
+    previous[initial_state_.ToString()] = "0";
+    distance[initial_state_.ToString()] = 0;
+
+    bool find_solution = false;
+    int step = 0;
+    while (!heap.empty() && !find_solution) {
+        int sz = heap.size();
+        for (int ind = 0; ind < sz; ++ind) {
+            auto cur = heap.top();
+            auto cur_str = cur.ToString();
+            heap.pop();
+            while (!heap.empty() && known.find(cur_str) != known.end()) {
+                cur = heap.top();
+                cur_str = cur.ToString();
+                heap.pop();
+            }
+            if (known.find(cur_str) != known.end()) {
+                break;
+            }
+            known.insert(cur_str);
+
+            for (int i = 0; i < NUM_DIRECTIONS; ++i) {
+                PlayerState moved_state;
+                if (!CheckMoving(cur, move_dx[i], level_data, moved_state)) {
+                    continue;
+                }
+
+                if (CheckArrived(moved_state, destination_record)) {
+                    end_state = moved_state;
+                    previous[end_state.ToString()] = cur_str;
+                    find_solution = true;
+                    break;
+                }
+
+                std::string moved_state_string = moved_state.ToString();
+                if (known.find(moved_state_string) != known.end()) {
+                    continue;
+                }
+
+                int estimate_next_end_dist = AStarEstimateDistanceToEnd(moved_state);
+                int next_dist = distance[cur_str] + 1 + estimate_next_end_dist;
+                if (distance.find(moved_state_string) == distance.end() ||
+                    next_dist < distance[moved_state_string] + estimate_next_end_dist) {
+                    distance[moved_state_string] = distance[cur_str] + 1;
+                    heap.push(moved_state);
+                    previous[moved_state_string] = cur_str;
+                }
+            }
+        }
+        ++step;
+        std::cout << "step: " << step << ", num of visited states at this steps: " << sz << std::endl;
+    }
+
+    std::vector<char> result;
+    if (!find_solution) {
+        return result;
+    }
+    std::cout << "number of visited states: " << distance.size() << "\n";
+    result = DecodeMoving(end_state, previous);
     return result;
 }
