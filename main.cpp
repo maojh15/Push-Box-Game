@@ -169,7 +169,9 @@ int main(int, char **) {
         auto io = ImGui::GetIO();
         io.WantCaptureKeyboard = false;
         while (SDL_PollEvent(&event)) {
-            push_box_game_machine.ProcessInput(event);
+            if (!push_box_game_machine.ProcessInput(event)) {
+                continue;
+            }
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;

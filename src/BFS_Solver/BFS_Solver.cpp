@@ -18,49 +18,26 @@
  * destination_record[i][j]=true iff there is a destination at (i,j).
  * @return a vector with elements of value {'u', 'r', 'd', 'l'} represent up, right, down, left moving respectively.
  */
-std::vector<char> BFS_Solver::SolveGame(const std::vector<std::vector<GameResource::ObjectName>> &level_data_,
+std::vector<char> BFS_Solver::SolveGame(const GameResource::GameLevelData &level_data_,
                                         const std::vector<std::vector<bool>> &destination_record) {
     AnalysisLevelData(level_data_, destination_record);
-    // return BFS_AStar(level_data_, destination_record);
-   return BFS(level_data_, destination_record);
+//     return BFS_AStar(level_data_, destination_record);
+    return BFS(level_data_.game_wall_map, destination_record);
 }
 
-void BFS_Solver::AnalysisLevelData(const std::vector<std::vector<GameResource::ObjectName>> &level_data,
+void BFS_Solver::AnalysisLevelData(const GameResource::GameLevelData &level_data,
                                    const std::vector<std::vector<bool>> &destination_record) {
     initial_state_.Reset();
-    for (int i = 0; i < level_data.size(); ++i) {
-        for (int j = 0; j < level_data[i].size(); ++j) {
-            switch (level_data[i][j]) {
-                case GameResource::BOX:
-                    initial_state_.list_box_pos.emplace(i, j);
-                    break;
-                case GameResource::PLAYER:
-                    initial_state_.player_pos.first = i;
-                    initial_state_.player_pos.second = j;
-                    break;
-                default:
-                    break;
-            }
-        }
+    for (auto &box_pos: level_data.box_positions) {
+        initial_state_.list_box_pos.emplace(box_pos.y, box_pos.x);
     }
+    initial_state_.player_pos.first = level_data.player_position.y;
+    initial_state_.player_pos.second = level_data.player_position.x;
 
     // test the correctness of input date.
-    const std::string hint_size_not_equal = "ERROR: The size of level_data and destination_record not match.";
-    int num_destination = 0;
-    destination_pos.clear();
-    if (destination_record.size() != level_data.size()) {
-        throw std::runtime_error(hint_size_not_equal);
-    }
-    for (int i = 0; i < destination_record.size(); ++i) {
-        if (destination_record[i].size() != level_data[i].size()) {
-            throw std::runtime_error(hint_size_not_equal);
-        }
-        for (int j = 0; j < destination_record[i].size(); ++j) {
-            if (destination_record[i][j]) {
-                destination_pos.emplace(i, j);
-                ++num_destination;
-            }
-        }
+    int num_destination = level_data.destination_positions.size();
+    for (auto &dest_pos: level_data.destination_positions) {
+        destination_pos.emplace(dest_pos.y, dest_pos.x);
     }
 
     if (num_destination != initial_state_.list_box_pos.size()) {

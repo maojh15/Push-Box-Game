@@ -25,7 +25,7 @@ public:
 
     GameResource GetGameResource() { return game_resource_; }
 
-    void ProcessInput(SDL_Event &event);
+    bool ProcessInput(SDL_Event &event);
 
     void CheckGameState();
 
@@ -39,7 +39,7 @@ public:
 
     void BFSSolveGame() {
         auto time1 = std::chrono::steady_clock::now();
-        std::vector<char> result = game_solver.SolveGame(game_resource_.level_data, game_resource_.destination_record);
+        std::vector<char> result = game_solver.SolveGame(*game_level_ptr, destination_record_);
         auto time2 = std::chrono::steady_clock::now();
         int count_step = 0;
         std::cout << "======BFS Solution==========\n";
@@ -79,35 +79,34 @@ private:
     void RenderLevelEditor(int game_area_height = 300, int game_area_width = 300);
 
     using Position = GameResource::Position;
-    Position player_position_;
-    std::vector<Position> destination_positions_, box_positions_;
-    std::vector<std::vector<GameResource::ObjectName>> level_data_ptr_;
     std::vector<std::vector<bool>> destination_record_;
+    std::vector<Position> box_positions_;
+    Position player_position_;
+    std::vector<std::vector<GameResource::ObjectName>> map_box_wall_floor_state_; // include information for box, floor and wall;
 
     int count_destination_left_;
+    int map_num_rows_, map_num_cols_;
 
     GameState game_state_;
 
     struct GameRecordNode {
         Position player_position;
-        std::vector<Position> destination_positions;
-        std::vector<std::vector<GameResource::ObjectName>> level_data;
+        std::vector<std::vector<GameResource::ObjectName>> map_box_wall_floor_state_;
         std::vector<std::vector<bool>> destination_record;
         int count_destination_left;
         GameState game_state;
 
-        GameRecordNode(const Position &player_position, const std::vector<Position> &destination_positions,
-                       const std::vector<std::vector<GameResource::ObjectName>> &level_data,
+        GameRecordNode(const Position &player_position,
+                       const std::vector<std::vector<GameResource::ObjectName>> &map_box_wall_floor_state_,
                        const std::vector<std::vector<bool>> &destination_record, int count_destination_left,
                        GameState game_state)
-                : player_position(player_position), destination_positions(destination_positions),
-                  level_data(level_data), destination_record(destination_record),
-                  count_destination_left(count_destination_left), game_state(game_state) {}
+                : player_position(player_position), map_box_wall_floor_state_(map_box_wall_floor_state_),
+                  destination_record(destination_record), count_destination_left(count_destination_left),
+                  game_state(game_state) {}
 
         void ReadFromRecord(PushBox &push_box) {
             push_box.player_position_ = player_position;
-            push_box.destination_positions_ = destination_positions;
-            push_box.level_data_ptr_ = level_data;
+            push_box.map_box_wall_floor_state_ = map_box_wall_floor_state_;
             push_box.destination_record_ = destination_record;
             push_box.count_destination_left_ = count_destination_left;
             push_box.game_state_ = game_state;
@@ -121,8 +120,8 @@ private:
             if (player_operation_record.size() >= max_record_size) {
                 player_operation_record.pop_front();
             }
-            player_operation_record.emplace_back(push_box.player_position_, push_box.destination_positions_,
-                                                 push_box.level_data_ptr_, push_box.destination_record_,
+            player_operation_record.emplace_back(push_box.player_position_, push_box.map_box_wall_floor_state_,
+                                                 push_box.destination_record_,
                                                  push_box.count_destination_left_, push_box.game_state_);
         }
 
@@ -158,6 +157,8 @@ private:
     bool resume_game_flag_ = false;
 
     BFS_Solver game_solver;
+    int selected_level_id = 0;
+    const GameResource::GameLevelData *game_level_ptr;
 };
 
 

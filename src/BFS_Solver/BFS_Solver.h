@@ -12,11 +12,11 @@
 
 class BFS_Solver {
 public:
-    std::vector<char> SolveGame(const std::vector<std::vector<GameResource::ObjectName>> &level_data_,
+    std::vector<char> SolveGame(const GameResource::GameLevelData &level_data_,
                                 const std::vector<std::vector<bool>> &destination_record);
 
 private:
-    void AnalysisLevelData(const std::vector<std::vector<GameResource::ObjectName>> &level_data,
+    void AnalysisLevelData(const GameResource::GameLevelData &level_data,
                            const std::vector<std::vector<bool>> &destination_record);
 
     std::vector<char> BFS(const std::vector<std::vector<GameResource::ObjectName>> &level_data,
@@ -52,7 +52,8 @@ private:
 
     static bool CheckArrived(const PlayerState &current_state, const std::vector<std::vector<bool>> &list_destination);
 
-    std::vector<char> DecodeMoving(PlayerState &end_state, const std::unordered_map<std::string, std::string> &previous);
+    std::vector<char>
+    DecodeMoving(PlayerState &end_state, const std::unordered_map<std::string, std::string> &previous);
 
     PlayerState initial_state_;
     std::set<std::pair<int, int>> destination_pos;
