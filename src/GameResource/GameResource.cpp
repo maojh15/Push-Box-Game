@@ -7,15 +7,13 @@
  * @param game_level_data
  * @param dump_data_file
  */
-void GameResource::DumpLevelData(const std::unordered_map<int, GameLevelData> &game_level_data,
+void GameResource::DumpLevelData(const std::vector<GameLevelData> &game_level_data,
                                  const std::string &dump_data_file_name) {
     std::ofstream dump_file{dump_data_file_name, std::ios::out};
     dump_file << game_level_data.size() << "\n";
-    for (const auto &elem: game_level_data) {
-        int level_id = elem.first;
+    for (int level_id = 0; level_id < game_level_data.size(); ++level_id) {
         dump_file << level_id << "\n";
-
-        const auto &level_data = elem.second;
+        const auto &level_data = game_level_data[level_id];
         // dump game wall map
         int height = level_data.game_wall_map.size();
         dump_file << height << " ";
@@ -48,12 +46,13 @@ void GameResource::DumpLevelData(const std::unordered_map<int, GameLevelData> &g
     }
 }
 
-void GameResource::ReadLevelDataFromFile(std::unordered_map<int, GameLevelData> &game_level_data,
+void GameResource::ReadLevelDataFromFile(std::vector<GameLevelData> &game_level_data,
                                          const std::string &dump_data_file_name) {
     game_level_data.clear();
     std::ifstream fin{dump_data_file_name, std::ios::in};
     int num_levels;
     fin >> num_levels;
+    game_level_data.resize(num_levels);
     for (int index = 0; index < num_levels; ++index) {
         int level_id;
         fin >> level_id;

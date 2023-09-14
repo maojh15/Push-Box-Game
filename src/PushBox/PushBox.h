@@ -8,20 +8,23 @@
 #include "GameResource.h"
 #include "SDL.h"
 #include "BFS_Solver.h"
+#include "LevelEditor.h"
 
-#define GAME_VERSION "version 1.0.1"
+#define GAME_VERSION "version 1.1.0"
 
 class PushBox {
 public:
     enum GameState {
-        START, PLAYING, PREWIN, WIN, END, LEVEL_EDITOR
+        START, PLAYING, PREWIN, WIN, END,
+        LEVEL_EDITOR
     };
 
     PushBox() {
         game_state_ = START;
+        level_editor_.SetGameResourcePtr(game_resource_);
     }
 
-    void Render(int game_area_height = 300, int game_area_width = 300);
+    void Render(float game_area_height = 300, float game_area_width = 300);
 
     GameResource GetGameResource() { return game_resource_; }
 
@@ -39,7 +42,7 @@ public:
 
     void BFSSolveGame() {
         auto time1 = std::chrono::steady_clock::now();
-        std::vector<char> result = game_solver.SolveGame(*game_level_ptr, destination_record_);
+        std::vector<char> result = game_solver.SolveGame(*game_level_ptr_, destination_record_);
         auto time2 = std::chrono::steady_clock::now();
         int count_step = 0;
         std::cout << "======BFS Solution==========\n";
@@ -68,7 +71,7 @@ private:
 
     bool MovePlayer(int move_x, int move_y);
 
-    void RenderPlayingState(int game_area_height = 300, int game_area_width = 300);
+    void RenderPlayingState(float game_area_height = 300, float game_area_width = 300);
 
     void RenderStartState();
 
@@ -76,13 +79,22 @@ private:
 
     int SetButtonStyle();
 
-    void RenderLevelEditor(int game_area_height = 300, int game_area_width = 300);
+    void RenderLevelEditor(float game_area_height = 300, float game_area_width = 300);
+
+    template<typename Iterable1, typename Iterable2>
+    void DrawGamePlaying(const Iterable1 &box_positions_list, const Iterable2 &destination_list,
+                         const GameResource::Position &player_position, float game_area_height,
+                         float game_area_width, float top_left_pos_x = -1, float top_left_pos_y = -1,
+                         bool show_player = true);
+
+    void PrepareLevelEditor();
+
+    void LoadGameLevelData(GameResource::GameLevelData &level_data);
 
     using Position = GameResource::Position;
     std::vector<std::vector<bool>> destination_record_;
-    std::vector<Position> box_positions_;
+    std::set<Position> box_pos_record_;
     Position player_position_;
-    std::vector<std::vector<GameResource::ObjectName>> map_box_wall_floor_state_; // include information for box, floor and wall;
 
     int count_destination_left_;
     int map_num_rows_, map_num_cols_;
@@ -91,23 +103,22 @@ private:
 
     struct GameRecordNode {
         Position player_position;
-        std::vector<std::vector<GameResource::ObjectName>> map_box_wall_floor_state_;
         std::vector<std::vector<bool>> destination_record;
+        std::set<Position> box_position_record;
         int count_destination_left;
         GameState game_state;
 
-        GameRecordNode(const Position &player_position,
-                       const std::vector<std::vector<GameResource::ObjectName>> &map_box_wall_floor_state_,
+        GameRecordNode(const Position &player_position, std::set<Position> box_position_record,
                        const std::vector<std::vector<bool>> &destination_record, int count_destination_left,
                        GameState game_state)
-                : player_position(player_position), map_box_wall_floor_state_(map_box_wall_floor_state_),
+                : player_position(player_position), box_position_record(box_position_record),
                   destination_record(destination_record), count_destination_left(count_destination_left),
                   game_state(game_state) {}
 
         void ReadFromRecord(PushBox &push_box) {
             push_box.player_position_ = player_position;
-            push_box.map_box_wall_floor_state_ = map_box_wall_floor_state_;
             push_box.destination_record_ = destination_record;
+            push_box.box_pos_record_ = box_position_record;
             push_box.count_destination_left_ = count_destination_left;
             push_box.game_state_ = game_state;
         }
@@ -120,7 +131,7 @@ private:
             if (player_operation_record.size() >= max_record_size) {
                 player_operation_record.pop_front();
             }
-            player_operation_record.emplace_back(push_box.player_position_, push_box.map_box_wall_floor_state_,
+            player_operation_record.emplace_back(push_box.player_position_, push_box.box_pos_record_,
                                                  push_box.destination_record_,
                                                  push_box.count_destination_left_, push_box.game_state_);
         }
@@ -148,17 +159,17 @@ private:
 
     GameRecord game_record_{50};
 
-    void RenderWin(int game_area_height, int game_area_width);
-
-    void RenderGamePlaying();
+    void RenderWin(float game_area_height, float game_area_width);
 
     bool show_win_image_ = true;
 
     bool resume_game_flag_ = false;
 
+    LevelEditor level_editor_;
+
     BFS_Solver game_solver;
     int selected_level_id = 0;
-    const GameResource::GameLevelData *game_level_ptr;
+    GameResource::GameLevelData *game_level_ptr_;
 };
 
 

@@ -27,6 +27,10 @@ public:
         int x, y;
 
         Position(int x = 0, int y = 0) : x{x}, y{y} {}
+
+        bool operator<(const Position &rhs) const {
+            return x < rhs.x || (x == rhs.x && y < rhs.y);
+        }
     };
 
     struct GameLevelData {
@@ -34,46 +38,54 @@ public:
         std::vector<Position> destination_positions; // list of destination positions.
         std::vector<Position> box_positions; // list box positions at beginning.
         Position player_position; // player's position at beginning.
+
+        void Clear() {
+            game_wall_map.clear();
+            destination_positions.clear();
+            box_positions.clear();
+            player_position = Position(0, 0);
+        }
     };
 
     GameResource() {
         auto base_path = SDL_GetBasePath();
         root_dir = std::string(base_path) + root_dir;
+        level_data_file_name = root_dir + level_data_file_name;
         std::cout << "Initialized Game resource ... " << std::endl;
         LoadImageResource();
-        ReadLevelDataFromFile(game_levels, root_dir + level_data_file_name);
+        ReadLevelDataFromFile(game_levels, level_data_file_name);
         std::cout << "Initialization Finished" << std::endl;
     }
 
-    GLuint GetWallTexture() {
+    GLuint GetWallTexture() const {
         return wall_texture->textureID;
     }
 
-    GLuint GetFloorTexture() {
+    GLuint GetFloorTexture() const {
         return floor_texture->textureID;
     }
 
-    GLuint GetBoxTexture() {
+    GLuint GetBoxTexture() const {
         return box_texture->textureID;
     }
 
-    GLuint GetBoxArrivedTexture() {
+    GLuint GetBoxArrivedTexture() const {
         return box_arrived_texture->textureID;
     }
 
-    GLuint GetDestinationTexture() {
+    GLuint GetDestinationTexture() const {
         return destination_texture->textureID;
     }
 
-    GLuint GetPlayerTextuer() {
+    GLuint GetPlayerTextuer() const {
         return player_texture->textureID;
     }
 
-    std::shared_ptr<LoadTextureTool> GetBackgroundTextureObj() {
+    std::shared_ptr<LoadTextureTool> GetBackgroundTextureObj() const {
         return background_texture;
     }
 
-    std::shared_ptr<LoadTextureTool> GetWinTextureObj() {
+    std::shared_ptr<LoadTextureTool> GetWinTextureObj() const {
         return win_texture;
     }
 
@@ -82,15 +94,29 @@ public:
     ImVec2 player_run_uv0{0.5, 0};
     ImVec2 player_run_uv1{1, 1};
 
-    static void DumpLevelData(const std::unordered_map<int, GameLevelData> &game_level_data,
+    static void DumpLevelData(const std::vector<GameLevelData> &game_level_data,
                               const std::string &dump_data_file_name);
 
-    static void ReadLevelDataFromFile(std::unordered_map<int, GameLevelData> &game_level_data,
+    static void ReadLevelDataFromFile(std::vector<GameLevelData> &game_level_data,
                                       const std::string &dump_data_file_name);
 
-    const GameLevelData &GetLevelData(int level_id) const {
-        return game_levels.at(level_id);
+    GameLevelData &GetLevelData(int level_id) {
+        return game_levels[level_id];
     }
+
+    bool IsLevelIdExist(int level_id) const {
+        return level_id >= 0 && level_id < game_levels.size();
+    }
+
+    void AddLevel(const GameLevelData &level_data) {
+        game_levels.push_back(level_data);
+    }
+
+    auto GetListLevels() const {
+        return game_levels;
+    }
+
+    std::string level_data_file_name = "level_data";
 
 private:
     std::string root_dir = "Resources/";
@@ -103,7 +129,6 @@ private:
 
     const std::string img_background = "background.jpg";
     const std::string img_win = "Win.png";
-    const std::string level_data_file_name = "level_data";
 
     std::shared_ptr<LoadTextureTool> wall_texture, floor_texture;
     std::shared_ptr<LoadTextureTool> box_texture, destination_texture, player_texture;
@@ -121,7 +146,7 @@ private:
         win_texture = std::make_shared<LoadTextureTool>((root_dir + img_win).c_str());
     }
 
-    std::unordered_map<int, GameLevelData> game_levels; // map from level_id to game_levels.
+    std::vector<GameLevelData> game_levels; // map from level_id to game_levels.
 };
 
 

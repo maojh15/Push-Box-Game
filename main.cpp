@@ -213,7 +213,7 @@ int main(int, char **) {
 //
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10);
             ImGui::PushFont(font);
-            push_box_game_machine.Render(0.7 * io.DisplaySize.y, 0.7 * io.DisplaySize.x);
+            push_box_game_machine.Render(0.95 * io.DisplaySize.y, 0.95 * io.DisplaySize.x);
             ImGui::PopFont();
             ImGui::PopStyleVar();
 

@@ -5,7 +5,7 @@
 #include "PushBox.h"
 #include "imgui.h"
 
-void PushBox::Render(int game_area_height, int game_area_width) {
+void PushBox::Render(float game_area_height, float game_area_width) {
     switch (game_state_) {
         case START:
             RenderStartState();
@@ -25,29 +25,57 @@ void PushBox::Render(int game_area_height, int game_area_width) {
     }
 }
 
-void PushBox::RenderPlayingState(int game_area_height, int game_area_width) {
-    int block_edge_len = std::min(game_area_height / map_num_rows_,
-                                  game_area_width / map_num_cols_);
+void PushBox::RenderPlayingState(float game_area_height, float game_area_width) {
+    DrawGamePlaying(box_pos_record_, game_level_ptr_->destination_positions, player_position_, game_area_height,
+                    game_area_width);
+
+    if (game_state_ != WIN) {
+        CheckGameState();
+    }
+
+    auto &io = ImGui::GetIO();
+    ImGui::SetCursorPos(ImVec2(io.DisplaySize.x - 100, 0.0));
+    ImGui::TextColored(ImVec4(0.0, 0.0, 0.0, 1.0), "step: %d", step_count_);
+
+    RenderFunctionButtons();
+}
+
+template<typename Iterable1, typename Iterable2>
+void PushBox::DrawGamePlaying(const Iterable1 &box_positions_list, const Iterable2 &destination_list,
+                              const Position &player_position, float game_area_height, float game_area_width,
+                              float top_left_pos_x, float top_left_pos_y,
+                              bool show_player) {
+    float block_edge_len = std::min(game_area_height / map_num_rows_,
+                                    game_area_width / map_num_cols_);
+    const float MAX_BLOCK_LEN = 50;
+    block_edge_len = std::min(block_edge_len, MAX_BLOCK_LEN);
     ImVec2 block_size(block_edge_len + 1, block_edge_len + 1);
     auto &io = ImGui::GetIO();
-    ImVec2 left_top_pos(static_cast<int>((io.DisplaySize.x - map_num_cols_ * block_edge_len) / 2),
-                        static_cast<int>((io.DisplaySize.y - map_num_rows_ * block_edge_len) / 2));
+    ImVec2 left_top_pos;
+    if (top_left_pos_x < 0 || top_left_pos_y < 0) {
+        left_top_pos = ImVec2(((io.DisplaySize.x - map_num_cols_ * block_edge_len) / 2),
+                              ((io.DisplaySize.y - map_num_rows_ * block_edge_len) / 2));
+    } else {
+        left_top_pos = ImVec2(top_left_pos_x, top_left_pos_y);
+    }
 
-    box_positions_.clear();
-    for (int i = 0; i < map_box_wall_floor_state_.size(); ++i) {
-        for (int j = 0; j < map_box_wall_floor_state_[i].size(); ++j) {
-            if (map_box_wall_floor_state_[i][j] == GameResource::OUTSIDE) {
+    if (game_state_ == LEVEL_EDITOR) {
+        level_editor_.SetDrawParameters(left_top_pos.x, left_top_pos.y, block_edge_len);
+    }
+
+    for (int i = 0; i < game_level_ptr_->game_wall_map.size(); ++i) {
+        for (int j = 0; j < game_level_ptr_->game_wall_map[i].size(); ++j) {
+            if (game_level_ptr_->game_wall_map[i][j] == GameResource::OUTSIDE) {
                 continue;
             }
             ImGui::SetCursorPos(ImVec2(left_top_pos.x + j * block_edge_len, left_top_pos.y + i * block_edge_len));
             ImGui::Image((void *) (intptr_t) (game_resource_.GetFloorTexture()), block_size);
             ImGui::SetCursorPos(ImVec2(left_top_pos.x + j * block_edge_len, left_top_pos.y + i * block_edge_len));
-            switch (map_box_wall_floor_state_[i][j]) {
+            switch (game_level_ptr_->game_wall_map[i][j]) {
                 case GameResource::WALL:
                     ImGui::Image((void *) (intptr_t) (game_resource_.GetWallTexture()), block_size);
                     break;
                 case GameResource::BOX:
-                    box_positions_.emplace_back(j, i);
                     break;
                 case GameResource::DESTINATION:
                     break;
@@ -63,11 +91,11 @@ void PushBox::RenderPlayingState(int game_area_height, int game_area_width) {
                       left_top_pos.y + pos.y * block_edge_len);
     };
 
-    for (auto &pos: game_level_ptr->destination_positions) {
+    for (auto &pos: destination_list) {
         ImGui::SetCursorPos(comp_position(pos));
         ImGui::Image((void *) (intptr_t) (game_resource_.GetDestinationTexture()), block_size);
     }
-    for (auto &pos: box_positions_) {
+    for (auto &pos: box_positions_list) {
         ImGui::SetCursorPos(comp_position(pos));
         ImGui::Image((void *) (intptr_t) (
                 destination_record_[pos.y][pos.x] ?
@@ -75,29 +103,22 @@ void PushBox::RenderPlayingState(int game_area_height, int game_area_width) {
                 game_resource_.GetBoxTexture()), block_size);
     }
 
-
-    ImGui::SetCursorPos(comp_position(player_position_));
-    ImGui::Image((void *) (intptr_t) (game_resource_.GetPlayerTextuer()), block_size,
-                 game_resource_.player_face_uv0, game_resource_.player_face_uv1);
-
-    if (game_state_ != WIN) {
-        CheckGameState();
+    if (show_player) {
+        ImGui::SetCursorPos(comp_position(player_position));
+        ImGui::Image((void *) (intptr_t) (game_resource_.GetPlayerTextuer()), block_size,
+                     game_resource_.player_face_uv0, game_resource_.player_face_uv1);
     }
-
-    ImGui::SetCursorPos(ImVec2(io.DisplaySize.x - 100, 0.0));
-    ImGui::TextColored(ImVec4(0.0, 0.0, 0.0, 1.0), "step: %d", step_count_);
-
-    RenderFunctionButtons();
 }
 
 void PushBox::RenderFunctionButtons() {
     // Add Button
     int num_style = SetButtonStyle();
-    ImVec2 button_sz(200, 50);
+    ImVec2 button_sz(170, 50);
     if (ImGui::Button("Return Title", button_sz)) {
         std::cout << "game state = " << game_state_ << std::endl;
         if (game_state_ == PLAYING) {
             resume_game_flag_ = true;
+            game_record_.Record(*this);
         }
         game_state_ = START;
     }
@@ -111,11 +132,26 @@ void PushBox::RenderFunctionButtons() {
     }
 
     button_sz.y = 40;
-    ImGui::SetCursorPosY(ImGui::GetIO().DisplaySize.y - button_sz.y - 10);
+
+    auto &io = ImGui::GetIO();
+    ImGui::SetCursorPosY(io.DisplaySize.y * 0.5 - button_sz.y);
+    if (ImGui::Button("Previous Level", button_sz)) {
+        int sz = game_resource_.GetListLevels().size();
+        selected_level_id = (selected_level_id + sz - 1) % sz;
+        InitializeGame();
+    }
+    if (ImGui::Button("Next Level", button_sz)) {
+        selected_level_id = (selected_level_id + 1) % game_resource_.GetListLevels().size();
+        InitializeGame();
+    }
+
+    ImGui::SetCursorPosY(io.DisplaySize.y - button_sz.y - 10);
     if (ImGui::Button("Restart", button_sz)) {
         InitializeGame();
     }
 
+    ImGui::SetCursorPos(ImVec2(io.DisplaySize.x - 80, io.DisplaySize.y - 60));
+    ImGui::TextColored(ImVec4(0, 0, 0, 1), "Lv %d.", selected_level_id);
     ImGui::PopStyleColor(num_style);
 }
 
@@ -125,7 +161,15 @@ void PushBox::RenderFunctionButtons() {
  * @return false, iff the event should be eaten
  */
 bool PushBox::ProcessInput(SDL_Event &event) {
-    if (game_state_ == PLAYING && event.type == SDL_KEYDOWN) {
+    if (game_state_ == LEVEL_EDITOR) {
+        if (event.type == SDL_MOUSEMOTION) {
+            level_editor_.SetMousePosition(event.motion.x, event.motion.y);
+        } else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == 1) {
+            level_editor_.mouse_button1_down = true;
+        } else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == 1) {
+            level_editor_.mouse_button1_down = false;
+        }
+    } else if (game_state_ == PLAYING && event.type == SDL_KEYDOWN) {
         switch (event.key.keysym.sym) {
             case SDLK_w:
             case SDLK_UP:
@@ -160,25 +204,30 @@ bool PushBox::ProcessInput(SDL_Event &event) {
  */
 bool PushBox::MovePlayer(int move_x, int move_y) {
     Position moved_pos{player_position_.x + move_x, player_position_.y + move_y};
-    if (map_box_wall_floor_state_[moved_pos.y][moved_pos.x] == GameResource::WALL) {
+    if (game_level_ptr_->game_wall_map[moved_pos.y][moved_pos.x] == GameResource::WALL) {
         return false;
     }
     bool is_recorded = false;
-    if (map_box_wall_floor_state_[moved_pos.y][moved_pos.x] == GameResource::BOX) {
+    auto box_itr = box_pos_record_.find(moved_pos);
+    if (box_itr != box_pos_record_.end()) {
+        Position moved_box_pos(moved_pos.x + move_x, moved_pos.y + move_y);
         // move box
-        if (map_box_wall_floor_state_[moved_pos.y + move_y][moved_pos.x + move_x] != GameResource::FLOOR) {
+        if (game_level_ptr_->game_wall_map[moved_box_pos.y][moved_box_pos.x] == GameResource::WALL ||
+            box_pos_record_.find(moved_box_pos) != box_pos_record_.end()) {
             return false;
         }
+        // record before change game state.
         game_record_.Record(*this);
         is_recorded = true;
+
+        box_pos_record_.erase(box_itr);
+        box_pos_record_.insert(moved_box_pos);
         if (destination_record_[moved_pos.y][moved_pos.x]) {
             ++count_destination_left_;
         }
-        if (destination_record_[moved_pos.y + move_y][moved_pos.x + move_x]) {
+        if (destination_record_[moved_box_pos.y][moved_box_pos.x]) {
             --count_destination_left_;
         }
-        map_box_wall_floor_state_[moved_pos.y + move_y][moved_pos.x + move_x] = GameResource::BOX;
-        map_box_wall_floor_state_[moved_pos.y][moved_pos.x] = GameResource::FLOOR;
     }
     if (!is_recorded) {
         game_record_.Record(*this);
@@ -202,43 +251,52 @@ void PushBox::CheckGameState() {
 }
 
 void PushBox::InitializeGame() {
-    game_level_ptr = &game_resource_.GetLevelData(selected_level_id);
-
-    map_num_rows_ = game_level_ptr->game_wall_map.size();
-    map_num_cols_ = 0;
-    for (auto &elem: game_level_ptr->game_wall_map) {
-        map_num_cols_ = std::max<int>(map_num_cols_, elem.size());
-    }
-
-    // initial map with wall, floor and box.
-    map_box_wall_floor_state_ = game_level_ptr->game_wall_map;
-    for (auto &box_pos: game_level_ptr->box_positions) {
-        map_box_wall_floor_state_[box_pos.y][box_pos.x] = GameResource::BOX;
-    }
-    // initial player's position
-    player_position_ = game_level_ptr->player_position;
-    // initial destination number.
-    count_destination_left_ = game_level_ptr->destination_positions.size();
-    // initial destination record;
-    destination_record_.resize(map_num_rows_);
-    for (int i = 0; i < map_num_cols_; ++i) {
-        destination_record_[i].resize(game_level_ptr->game_wall_map[i].size());
-        std::fill(destination_record_[i].begin(), destination_record_[i].end(), false);
-    }
-    for (auto &dest_pos: game_level_ptr->destination_positions) {
-        destination_record_[dest_pos.y][dest_pos.x] = true;
-    }
+    LoadGameLevelData(game_resource_.GetLevelData(selected_level_id));
 
     game_state_ = PLAYING;
     game_record_.ClearRecord();
     step_count_ = 0;
     show_win_image_ = true;
     resume_game_flag_ = false;
-
-
 }
 
-void PushBox::RenderWin(int game_area_height, int game_area_width) {
+void PushBox::LoadGameLevelData(GameResource::GameLevelData &level_data) {
+    game_level_ptr_ = &level_data;
+
+    map_num_rows_ = game_level_ptr_->game_wall_map.size();
+    map_num_cols_ = 0;
+    for (auto &elem: game_level_ptr_->game_wall_map) {
+        map_num_cols_ = std::max<int>(map_num_cols_, elem.size());
+    }
+
+    // initial player's position
+    player_position_ = game_level_ptr_->player_position;
+    // initial boxs' positions record.
+    box_pos_record_.clear();
+    for (auto &box_pos: game_level_ptr_->box_positions) {
+        box_pos_record_.emplace(box_pos);
+    }
+
+    // initial destination record;
+    destination_record_.resize(map_num_rows_);
+    for (int i = 0; i < map_num_rows_; ++i) {
+        destination_record_[i].resize(game_level_ptr_->game_wall_map[i].size());
+        std::fill(destination_record_[i].begin(), destination_record_[i].end(), false);
+    }
+    for (auto &dest_pos: game_level_ptr_->destination_positions) {
+        destination_record_[dest_pos.y][dest_pos.x] = true;
+    }
+
+    // initial destination number.
+    count_destination_left_ = game_level_ptr_->destination_positions.size();
+    for (const auto &box_pos: game_level_ptr_->box_positions) {
+        if (destination_record_[box_pos.y][box_pos.x]) {
+            --count_destination_left_;
+        }
+    }
+}
+
+void PushBox::RenderWin(float game_area_height, float game_area_width) {
     RenderPlayingState(game_area_height, game_area_width);
 
     if (show_win_image_) {
@@ -273,6 +331,12 @@ void PushBox::RenderWin(int game_area_height, int game_area_width) {
 //    return 3;
 //}
 
+void PushBox::PrepareLevelEditor() {
+    level_editor_.ResetState();
+    game_level_ptr_ = &level_editor_.game_level;
+    level_editor_.destination_record_ptr_ = &destination_record_;
+}
+
 void PushBox::RenderStartState() {
     int num_style = SetButtonStyle();
 
@@ -282,6 +346,8 @@ void PushBox::RenderStartState() {
     ImGui::SetCursorPosX(io.DisplaySize.x - button_sz.x - 10);
     ImGui::SetCursorPosY(10);
     if (ImGui::Button("Level Editor", button_sz)) {
+        // change to level_editor.
+        PrepareLevelEditor();
         game_state_ = LEVEL_EDITOR;
     }
 
@@ -292,6 +358,8 @@ void PushBox::RenderStartState() {
         if (ImGui::Button("Resume Game", button_sz)) {
             game_state_ = PLAYING;
             resume_game_flag_ = false;
+            LoadGameLevelData(game_resource_.GetLevelData(selected_level_id));
+            game_record_.RecoverRecord(*this);
         }
     } else {
         ImGui::SetCursorPosY(0.25 * io.DisplaySize.y);
@@ -328,13 +396,44 @@ int PushBox::SetButtonStyle() {
     return 3;
 }
 
-void PushBox::RenderLevelEditor(int game_area_height, int game_area_width) {
+void PushBox::RenderLevelEditor(float game_area_height, float game_area_width) {
     int num_style = SetButtonStyle();
     ImGui::SetCursorPos(ImVec2(10, 20));
     ImVec2 button_sz(150, 40);
     if (ImGui::Button("Return Title", button_sz)) {
         game_state_ = START;
-        resume_game_flag_ = true;
+    }
+
+    auto &io = ImGui::GetIO();
+
+    if (!level_editor_.assigned_map_size) {
+        level_editor_.RenderSetMapSize(map_num_rows_, map_num_cols_);
+    }
+
+    if (level_editor_.ShouldRenderGameMap()) {
+        if (level_editor_.saved_) {
+            DrawGamePlaying(level_editor_.game_level.box_positions,
+                            level_editor_.game_level.destination_positions,
+                            level_editor_.game_level.player_position, game_area_height,
+                            game_area_width, -1, -1, level_editor_.GetShowPlayer());
+        } else {
+            DrawGamePlaying(level_editor_.box_positions_, level_editor_.destination_positions_,
+                            level_editor_.game_level.player_position, game_area_height,
+                            game_area_width, -1, -1, level_editor_.GetShowPlayer());
+
+
+            ImGui::SetCursorPos(ImVec2(io.DisplaySize.x - button_sz.x - 10, 15));
+            if (ImGui::Button("Save", button_sz)) {
+                level_editor_.SaveLevelData();
+                level_editor_.state_ = LevelEditor::SAVE_UI;
+                LoadGameLevelData(level_editor_.game_level);
+            }
+        }
+    }
+
+    level_editor_.RenderEditor(game_area_height, game_area_width);
+    if (level_editor_.state_ == LevelEditor::SAVED) {
+        game_state_ = START;
     }
 
     ImGui::PopStyleColor(num_style);
