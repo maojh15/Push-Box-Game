@@ -272,6 +272,9 @@ bool LevelEditor::CheckWallClosed(const std::vector<std::vector<GameResource::Ob
             }
         }
     }
+    if (destination_positions_.find(player_position) != destination_positions_.end()) {
+        ++count_destination;
+    }
     if (count_destination != destination_positions_.size()) {
         hint_str = "There are some destinations cannot be reached by player.";
         return false;
