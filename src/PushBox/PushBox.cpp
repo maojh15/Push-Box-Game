@@ -254,6 +254,15 @@ void PushBox::RenderFunctionButtons() {
  * @return false, iff the event should be eaten
  */
 bool PushBox::ProcessInput(SDL_Event &event) {
+    if (game_state_ == LEVEL_EDITOR) {
+        if (event.type == SDL_MOUSEMOTION) {
+            level_editor_.SetMousePosition(event.motion.x, event.motion.y);
+        } else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == 1) {
+            level_editor_.mouse_button1_down = true;
+        } else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == 1) {
+            level_editor_.mouse_button1_down = false;
+        }
+    }
     if (solver_working || show_solution_steps_by_steps) {
         if (game_state_ == PLAYING && event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {
@@ -272,15 +281,6 @@ bool PushBox::ProcessInput(SDL_Event &event) {
             }
         }
         return true;
-    }
-    if (game_state_ == LEVEL_EDITOR) {
-        if (event.type == SDL_MOUSEMOTION) {
-            level_editor_.SetMousePosition(event.motion.x, event.motion.y);
-        } else if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == 1) {
-            level_editor_.mouse_button1_down = true;
-        } else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == 1) {
-            level_editor_.mouse_button1_down = false;
-        }
     } else if (game_state_ == PLAYING && event.type == SDL_KEYDOWN) {
         switch (event.key.keysym.sym) {
             case SDLK_w:
@@ -307,6 +307,7 @@ bool PushBox::ProcessInput(SDL_Event &event) {
     }
     return true;
 }
+
 
 /**
  *
