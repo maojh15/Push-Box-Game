@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 project(DEMO_IMGUI)
 set(CMAKE_CXX_STANDARD 14)
 # add_executable(main MACOSX_BUNDLE main.cpp)
-add_executable(main main.cpp)
+add_executable(main src/main.cpp)
 
 function(initialize_imgui_lib)
     #set(CMAKE_FRAMEWORK_PATH "/Library/Frameworks")

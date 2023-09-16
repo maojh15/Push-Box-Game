@@ -164,8 +164,12 @@ void PushBox::RenderFunctionButtons() {
             show_solution_steps_by_steps = true;
             show_solution_steps = 0;
             game_record_.Record(*this);
+            game_record_for_show_solution_.ClearRecord();
+            game_record_for_show_solution_.max_record_size = bfs_result.size() + 1;
             std::swap(game_record_, game_record_for_show_solution_);
             LoadGameLevelData(game_resource_.GetLevelData(selected_level_id));
+            step_count_ = 0;
+            game_state_ = PLAYING;
         } else if (show_solution_steps_by_steps) {
             ImGui::SetCursorPosX(io.DisplaySize.x - show_sol_button_sz.x - 10);
             if (ImGui::Button("Return playing", show_sol_button_sz)) {
@@ -174,29 +178,33 @@ void PushBox::RenderFunctionButtons() {
                 game_record_.RecoverRecord(*this);
             }
         }
-        const std::string hint_tot_steps_sol("total steps of solution");
-        auto text_sz = ImGui::CalcTextSize(hint_tot_steps_sol.c_str());
-        const std::string hint_steps = std::to_string(bfs_result.size());
-        auto text_steps_sz = ImGui::CalcTextSize(hint_steps.c_str());
-        ImGui::SetCursorPosX(io.DisplaySize.x - text_sz.x - 10);
-        ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", hint_tot_steps_sol.c_str());
-        ImGui::SetCursorPosX(io.DisplaySize.x - (text_sz.x + text_steps_sz.x) / 2 - 10);
-        ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", hint_steps.c_str());
+        if (game_solver.no_solution_flag) {
+            const std::string hint_no_solution("No solution");
+            auto text_sz = ImGui::CalcTextSize(hint_no_solution.c_str());
+            ImGui::SetCursorPosX(io.DisplaySize.x - (text_sz.x + show_sol_button_sz.x) / 2 - 10);
+            ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", hint_no_solution.c_str());
+        } else if (game_solver.solver_done_flag) {
+            const std::string hint_tot_steps_sol("total steps of solution");
+            auto text_sz = ImGui::CalcTextSize(hint_tot_steps_sol.c_str());
+            const std::string hint_steps = std::to_string(bfs_result.size());
+            auto text_steps_sz = ImGui::CalcTextSize(hint_steps.c_str());
+            ImGui::SetCursorPosX(io.DisplaySize.x - text_sz.x - 10);
+            ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", hint_tot_steps_sol.c_str());
+            ImGui::SetCursorPosX(io.DisplaySize.x - (text_sz.x + text_steps_sz.x) / 2 - 10);
+            ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", hint_steps.c_str());
+        }
 
         if (show_solution_steps_by_steps) {
-            ImGui::BeginDisabled(show_solution_steps <= 0);
+            ImGui::BeginDisabled(game_record_.player_operation_record.empty());
             ImGui::SetCursorPosX(io.DisplaySize.x - show_sol_button_sz.x - 10);
             if (ImGui::Button("Previous Step", show_sol_button_sz)) {
-                game_record_.RecoverRecord(*this);
-                --show_solution_steps;
+                ShowSolutionPreviousStep();
             }
             ImGui::EndDisabled();
-            ImGui::BeginDisabled(show_solution_steps + 1 > bfs_result.size());
+            ImGui::BeginDisabled(count_destination_left_ <= 0);
             ImGui::SetCursorPosX(io.DisplaySize.x - show_sol_button_sz.x - 10);
             if (ImGui::Button("Next step", show_sol_button_sz)) {
-                auto moving = GetMovingFromBFS_Result(bfs_result, show_solution_steps);
-                MovePlayer(moving.x, moving.y);
-                ++show_solution_steps;
+                ShowSolutionNextStep();
             }
             ImGui::EndDisabled();
         }
@@ -248,6 +256,23 @@ void PushBox::RenderFunctionButtons() {
     ImGui::PopStyleColor(num_style);
 }
 
+void PushBox::ShowSolutionNextStep() {
+    if (show_solution_steps >= 0 && show_solution_steps < bfs_result.size() && count_destination_left_ > 0) {
+        auto moving = GetMovingFromBFS_Result(bfs_result, show_solution_steps);
+        MovePlayer(moving.x, moving.y);
+        ++show_solution_steps;
+    }
+}
+
+void PushBox::ShowSolutionPreviousStep() {
+    if (show_solution_steps >= 0 && !game_record_.player_operation_record.empty()) {
+        game_record_.RecoverRecord(*this);
+        if (show_solution_steps > 0) {
+            --show_solution_steps;
+        }
+    }
+}
+
 /**
  *
  * @param event
@@ -261,6 +286,20 @@ bool PushBox::ProcessInput(SDL_Event &event) {
             level_editor_.mouse_button1_down = true;
         } else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == 1) {
             level_editor_.mouse_button1_down = false;
+        }
+    }
+    if (event.type == SDL_KEYDOWN && game_state_ == PLAYING && show_solution_steps_by_steps) {
+        switch (event.key.keysym.sym) {
+            case SDLK_a:
+            case SDLK_LEFT:
+                ShowSolutionPreviousStep();
+                return false;
+                break;
+            case SDLK_d:
+            case SDLK_RIGHT:
+                ShowSolutionNextStep();
+                return false;
+                break;
         }
     }
     if (solver_working || show_solution_steps_by_steps) {

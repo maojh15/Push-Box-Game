@@ -397,6 +397,9 @@ bool LevelEditor::SaveLevelData() {
     if (!is_player_pos_seted) {
         hint_str = "You must set the player station.";
         return false;
+    } else if (destination_positions_.empty()) {
+        hint_str = "At least one destination should be set.";
+        return false;
     } else if (box_positions_.size() != destination_positions_.size()) {
         hint_str = "The number of boxes and destinations should be equal.";
         return false;

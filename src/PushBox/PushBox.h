@@ -178,6 +178,9 @@ private:
 
     void RenderWin(float game_area_height, float game_area_width);
 
+    void ShowSolutionNextStep();
+    void ShowSolutionPreviousStep();
+
     bool show_win_image_ = true;
 
     bool resume_game_flag_ = false;
