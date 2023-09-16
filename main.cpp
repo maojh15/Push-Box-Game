@@ -195,7 +195,7 @@ int main(int, char **) {
                          ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground |
                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
                          ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar |
-                         ImGuiWindowFlags_NoScrollWithMouse);
+                         ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus);
             ImGui::SetWindowSize(io.DisplaySize, ImGuiCond_Always);
             ImGui::SetWindowPos(ImVec2(0, 0), ImGuiCond_Always);
 //            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, 0);

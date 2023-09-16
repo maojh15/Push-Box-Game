@@ -110,12 +110,33 @@ void PushBox::DrawGamePlaying(const Iterable1 &box_positions_list, const Iterabl
     }
 }
 
+GameResource::Position GetMovingFromBFS_Result(const std::vector<char> &bfs_result, int step_index) {
+    switch (bfs_result[step_index]) {
+        case 'u':
+            return GameResource::Position(0, -1);
+            break;
+        case 'r':
+            return GameResource::Position(1, 0);
+            break;
+        case 'd':
+            return GameResource::Position(0, 1);
+            break;
+        case 'l':
+            return GameResource::Position(-1, 0);
+            break;
+        default:
+            throw std::invalid_argument("Invalid char " + std::to_string(bfs_result[step_index]) + " in bfs_result");
+    }
+}
+
 void PushBox::RenderFunctionButtons() {
     // Add Button
     int num_style = SetButtonStyle();
+    if (solver_working || show_solution_steps_by_steps) {
+        ImGui::BeginDisabled(true);
+    }
     ImVec2 button_sz(170, 50);
     if (ImGui::Button("Return Title", button_sz)) {
-        std::cout << "game state = " << game_state_ << std::endl;
         if (game_state_ == PLAYING) {
             resume_game_flag_ = true;
             game_record_.Record(*this);
@@ -123,17 +144,68 @@ void PushBox::RenderFunctionButtons() {
         game_state_ = START;
     }
 
+    auto &io = ImGui::GetIO();
     button_sz.y = 50;
     if (ImGui::Button("Revoke One Step.", button_sz)) {
         RevokeOneStep();
     }
-    if (ImGui::Button("BFS Solution", button_sz)) {
-        BFSSolveGame();
+    if (solver_working || show_solution_steps_by_steps) {
+        ImGui::EndDisabled();
+    }
+    if (!game_solver.solver_done_flag) {
+        if (!solver_working && ImGui::Button("BFS Solution", button_sz)) {
+            BFSSolveGame();
+        }
+    } else {
+        ImVec2 show_sol_button_sz(150, button_sz.y);
+        ImGui::SetCursorPosX(io.DisplaySize.x - show_sol_button_sz.x - 10);
+        ImGui::SetCursorPosY(50);
+        if (!show_solution_steps_by_steps && ImGui::Button("Show Solution", show_sol_button_sz)) {
+            show_solution_steps_by_steps = true;
+            show_solution_steps = 0;
+            game_record_.Record(*this);
+            std::swap(game_record_, game_record_for_show_solution_);
+            LoadGameLevelData(game_resource_.GetLevelData(selected_level_id));
+        } else if (show_solution_steps_by_steps) {
+            ImGui::SetCursorPosX(io.DisplaySize.x - show_sol_button_sz.x - 10);
+            if (ImGui::Button("Return playing", show_sol_button_sz)) {
+                show_solution_steps_by_steps = false;
+                std::swap(game_record_, game_record_for_show_solution_);
+                game_record_.RecoverRecord(*this);
+            }
+        }
+        const std::string hint_tot_steps_sol("total steps of solution");
+        auto text_sz = ImGui::CalcTextSize(hint_tot_steps_sol.c_str());
+        const std::string hint_steps = std::to_string(bfs_result.size());
+        auto text_steps_sz = ImGui::CalcTextSize(hint_steps.c_str());
+        ImGui::SetCursorPosX(io.DisplaySize.x - text_sz.x - 10);
+        ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", hint_tot_steps_sol.c_str());
+        ImGui::SetCursorPosX(io.DisplaySize.x - (text_sz.x + text_steps_sz.x) / 2 - 10);
+        ImGui::TextColored(ImVec4(0, 0, 0, 1), "%s", hint_steps.c_str());
+
+        if (show_solution_steps_by_steps) {
+            ImGui::BeginDisabled(show_solution_steps <= 0);
+            ImGui::SetCursorPosX(io.DisplaySize.x - show_sol_button_sz.x - 10);
+            if (ImGui::Button("Previous Step", show_sol_button_sz)) {
+                game_record_.RecoverRecord(*this);
+                --show_solution_steps;
+            }
+            ImGui::EndDisabled();
+            ImGui::BeginDisabled(show_solution_steps + 1 > bfs_result.size());
+            ImGui::SetCursorPosX(io.DisplaySize.x - show_sol_button_sz.x - 10);
+            if (ImGui::Button("Next step", show_sol_button_sz)) {
+                auto moving = GetMovingFromBFS_Result(bfs_result, show_solution_steps);
+                MovePlayer(moving.x, moving.y);
+                ++show_solution_steps;
+            }
+            ImGui::EndDisabled();
+        }
     }
 
     button_sz.y = 40;
-
-    auto &io = ImGui::GetIO();
+    if (solver_working || show_solution_steps_by_steps) {
+        ImGui::BeginDisabled(true);
+    }
     ImGui::SetCursorPosY(io.DisplaySize.y * 0.5 - button_sz.y);
     if (ImGui::Button("Previous Level", button_sz)) {
         int sz = game_resource_.GetListLevels().size();
@@ -149,6 +221,27 @@ void PushBox::RenderFunctionButtons() {
     if (ImGui::Button("Restart", button_sz)) {
         InitializeGame();
     }
+    if (solver_working || show_solution_steps_by_steps) {
+        ImGui::EndDisabled();
+    }
+
+    if (solver_working) {
+        BFSSolveGame();
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.216, 0.27, 0.178, 0.873));
+        ImGui::SetNextWindowSize(ImVec2(120, 100), ImGuiCond_Always);
+        ImGui::Begin("Solving ...", nullptr,
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                     ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar |
+                     ImGuiWindowFlags_NoTitleBar);
+        ImGui::Text("Solving ... ");
+        ImVec2 abrupt_button_sz(100, 40);
+        if (ImGui::Button("Abrupt", abrupt_button_sz)) {
+            game_solver.abrupt_flag = true;
+            solver_working = false;
+        }
+        ImGui::End();
+        ImGui::PopStyleColor();
+    }
 
     ImGui::SetCursorPos(ImVec2(io.DisplaySize.x - 80, io.DisplaySize.y - 60));
     ImGui::TextColored(ImVec4(0, 0, 0, 1), "Lv %d.", selected_level_id);
@@ -161,6 +254,25 @@ void PushBox::RenderFunctionButtons() {
  * @return false, iff the event should be eaten
  */
 bool PushBox::ProcessInput(SDL_Event &event) {
+    if (solver_working || show_solution_steps_by_steps) {
+        if (game_state_ == PLAYING && event.type == SDL_KEYDOWN) {
+            switch (event.key.keysym.sym) {
+                case SDLK_w:
+                case SDLK_UP:
+                case SDLK_d:
+                case SDLK_RIGHT:
+                case SDLK_s:
+                case SDLK_DOWN:
+                case SDLK_a:
+                case SDLK_LEFT:
+                    return false;
+                    break;
+                default:
+                    break;
+            }
+        }
+        return true;
+    }
     if (game_state_ == LEVEL_EDITOR) {
         if (event.type == SDL_MOUSEMOTION) {
             level_editor_.SetMousePosition(event.motion.x, event.motion.y);
@@ -239,7 +351,7 @@ bool PushBox::MovePlayer(int move_x, int move_y) {
 }
 
 void PushBox::CheckGameState() {
-    if (count_destination_left_ != 0) {
+    if (count_destination_left_ != 0 || show_solution_steps_by_steps) {
         return;
     }
     if (game_state_ == PREWIN) {
@@ -258,6 +370,10 @@ void PushBox::InitializeGame() {
     step_count_ = 0;
     show_win_image_ = true;
     resume_game_flag_ = false;
+    game_solver.solver_done_flag = false;
+    bfs_result.clear();
+    show_solution_steps_by_steps = false;
+    show_solution_steps = 0;
 }
 
 void PushBox::LoadGameLevelData(GameResource::GameLevelData &level_data) {

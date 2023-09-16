@@ -20,9 +20,11 @@
  */
 std::vector<char> BFS_Solver::SolveGame(const GameResource::GameLevelData &level_data_,
                                         const std::vector<std::vector<bool>> &destination_record) {
+    abrupt_flag = false;
     AnalysisLevelData(level_data_, destination_record);
 //     return BFS_AStar(level_data_, destination_record);
-    return BFS(level_data_.game_wall_map, destination_record);
+    auto res = BFS(level_data_.game_wall_map, destination_record);
+    return res;
 }
 
 void BFS_Solver::AnalysisLevelData(const GameResource::GameLevelData &level_data,
@@ -103,6 +105,9 @@ std::vector<char> BFS_Solver::BFS(const std::vector<std::vector<GameResource::Ob
     while (!que.empty() && !find_solution) {
         int que_sz = que.size();
         for (int que_index = 0; que_index < que_sz; ++que_index) {
+            if (abrupt_flag) {
+                return {};
+            }
             auto cur = que.front();
             std::string cur_str = cur.ToString();
             que.pop();
@@ -136,6 +141,7 @@ std::vector<char> BFS_Solver::BFS(const std::vector<std::vector<GameResource::Ob
     }
     std::cout << "number of visited states: " << visited.size() << "\n";
     result = DecodeMoving(end_state, visited);
+    solver_done_flag = true;
     return result;
 }
 

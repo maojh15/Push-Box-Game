@@ -9,9 +9,13 @@
 
 #include <set>
 #include <iostream>
+#include <atomic>
 
 class BFS_Solver {
 public:
+    std::atomic<bool> abrupt_flag{false};
+    std::atomic<bool> solver_done_flag{false};
+
     std::vector<char> SolveGame(const GameResource::GameLevelData &level_data_,
                                 const std::vector<std::vector<bool>> &destination_record);
 
