@@ -227,7 +227,10 @@ void PushBox::RenderFunctionButtons() {
 
     ImGui::SetCursorPosY(io.DisplaySize.y - button_sz.y - 10);
     if (ImGui::Button("Restart", button_sz)) {
-        InitializeGame();
+        game_record_.ClearRecord();
+        LoadGameLevelData(game_resource_.GetLevelData(selected_level_id));
+        step_count_ = 0;
+        game_state_ = PLAYING;
     }
     if (solver_working || show_solution_steps_by_steps) {
         ImGui::EndDisabled();
@@ -510,7 +513,7 @@ void PushBox::RenderStartState() {
     ImGui::SetCursorPosX((io.DisplaySize.x - button_sz.x) / 2);
 
     if (resume_game_flag_) {
-        ImGui::SetCursorPosY(0.25 * io.DisplaySize.y - button_sz.y);
+        ImGui::SetCursorPosY(0.35 * io.DisplaySize.y - button_sz.y);
         if (ImGui::Button("Resume Game", button_sz)) {
             game_state_ = PLAYING;
             resume_game_flag_ = false;
@@ -518,7 +521,7 @@ void PushBox::RenderStartState() {
             game_record_.RecoverRecord(*this);
         }
     } else {
-        ImGui::SetCursorPosY(0.25 * io.DisplaySize.y);
+        ImGui::SetCursorPosY(0.35 * io.DisplaySize.y);
     }
 
     button_sz.y = 60;

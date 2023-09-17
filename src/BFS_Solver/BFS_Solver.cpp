@@ -36,7 +36,9 @@ std::vector<char> BFS_Solver::SolveGame(const GameResource::GameLevelData &level
 //        res = BFS_AStar(level_data_, destination_record);
 //        res = BFS(level_data_.game_wall_map, destination_record);
     }
-    solver_done_flag = true;
+    if (!abrupt_flag) {
+        solver_done_flag = true;
+    }
     return res;
 }
 
@@ -406,7 +408,7 @@ namespace {
 
             heap.push(start_pos);
             bool is_arrived = false;
-            while (!is_arrived && !heap.empty()) {
+            while (!heap.empty()) {
                 auto cur = heap.top();
                 heap.pop();
                 int cur_index = cur.first * n_cols + cur.second;
@@ -417,6 +419,10 @@ namespace {
                 }
                 if (known[cur_index]) {
                     throw std::runtime_error("No path exist from start_point to end point");
+                }
+                if (cur_index == end_pos_index) {
+                    is_arrived = true;
+                    break;
                 }
                 known[cur_index] = true;
                 int cur_dist = map_record[cur_index];
@@ -432,10 +438,6 @@ namespace {
                         map_record[moved_index] = new_dist;
                         heap.push(moved);
                         previous[moved_index] = cur_index;
-                        if (moved_index == end_pos_index) {
-                            is_arrived = true;
-                            break;
-                        }
                     }
                 }
             }
@@ -524,9 +526,10 @@ std::vector<char> BFS_Solver::DijkstraMethod(const std::vector<std::vector<GameR
     PlayerState end_state;
     DijkstraDistanceMap dist_map(map_n_rows_, map_n_cols_);
 
+    int old_num_visited = 0;
     bool arrive_end_point = false;
     // Dijkstra algorithm
-    while (!arrive_end_point && !heap.empty()) {
+    while (!heap.empty()) {
         if (abrupt_flag) {
             return {};
         }
@@ -539,9 +542,16 @@ std::vector<char> BFS_Solver::DijkstraMethod(const std::vector<std::vector<GameR
         if (known.find(cur_str) != known.end()) {
             return {};
         }
+
         known.insert(cur_str);
 
         auto cur = PlayerState::Decode(cur_str);
+        if (CheckArrived(cur, destination_record)) {
+            arrive_end_point = true;
+            end_state = std::move(cur);
+            break;
+        }
+
         dist_map.GenerateMapDistance(level_data, cur);
         // visit each box.
         for (auto &box_pos: cur.list_box_pos) {
@@ -571,17 +581,13 @@ std::vector<char> BFS_Solver::DijkstraMethod(const std::vector<std::vector<GameR
                 }
                 distance[moved_state_str] = next_dist;
                 heap.push(moved_state_str);
-                previous.emplace(moved_state_str,
-                                 RecordMoveAction(cur.player_pos, box_pos, moved_box_pos));
-                if (CheckArrived(moved_state, destination_record)) {
-                    arrive_end_point = true;
-                    end_state = std::move(moved_state);
-                    break;
-                }
+                previous[moved_state_str] = RecordMoveAction(cur.player_pos, box_pos, moved_box_pos);
             }
-            if (arrive_end_point) {
-                break;
-            }
+        }
+        int sz = previous.size();
+        if (sz > (old_num_visited << 1)) {
+            std::cout << "num of states visited: " << sz << ", searched steps: " << distance[cur_str] << std::endl;
+            old_num_visited = sz;
         }
     }
 
